@@ -9,12 +9,12 @@ const HeroSection: React.FC = () => {
       component="section"
       id="hero"
       sx={{
-        minHeight: '100vh',
-        height: '100vh',
+        minHeight: { xs: 'auto', md: '100vh' },
+        height: { xs: 'auto', md: '100vh' },
         py: { xs: 8, md: 12 },
         position: 'relative',
-        scrollSnapAlign: 'start',
-        scrollSnapStop: 'always',
+        scrollSnapAlign: { xs: 'none', md: 'start' },
+        scrollSnapStop: { xs: 'none', md: 'always' },
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -25,7 +25,7 @@ const HeroSection: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
       }}>
-        <Grid container spacing={4} sx={{ 
+        <Grid container spacing={3} sx={{ 
           height: '100%',
           alignItems: 'center',
         }}>
@@ -79,9 +79,9 @@ const HeroSection: React.FC = () => {
             <Box
               sx={{
                 position: 'relative',
-                width: { xs: '300px', md: '360px' },
-                height: { xs: '300px', md: '360px' },
-                mt: { xs: 4, md: 0 },
+                width: { xs: '250px', md: '360px' },
+                height: { xs: '250px', md: '360px' },
+                mt: { xs: 3, md: 0 },
                 ml: { xs: 'auto', md: '20px' },
               }}
             >

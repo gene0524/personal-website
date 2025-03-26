@@ -28,6 +28,8 @@ function App() {
           height: '100vh',
           overflowY: 'auto',
           scrollSnapType: { xs: 'none', md: 'y proximity' },
+          scrollBehavior: 'smooth',
+          overscrollBehavior: 'contain',
           '&::-webkit-scrollbar': {
             width: 8,
           },

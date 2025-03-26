@@ -9,10 +9,10 @@ import { personalInfo } from '../../data/personalInfo';
 import { skills } from '../../data/skills';
 
 const iconMap = {
-  CodeIcon: <CodeIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
-  BrushIcon: <BrushIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
-  StorageIcon: <StorageIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
-  CloudIcon: <CloudIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
+  CodeIcon: <CodeIcon sx={{ fontSize: { xs: 30, md: 40 }, color: 'primary.main' }} />,
+  BrushIcon: <BrushIcon sx={{ fontSize: { xs: 30, md: 40 }, color: 'primary.main' }} />,
+  StorageIcon: <StorageIcon sx={{ fontSize: { xs: 30, md: 40 }, color: 'primary.main' }} />,
+  CloudIcon: <CloudIcon sx={{ fontSize: { xs: 30, md: 40 }, color: 'primary.main' }} />,
 };
 
 const AboutSection: React.FC = () => {
@@ -23,7 +23,7 @@ const AboutSection: React.FC = () => {
       sx={{
         minHeight: { xs: 'auto', md: '100vh' },
         height: { xs: 'auto', md: '100vh' },
-        py: { xs: 8, md: 12 },
+        py: { xs: 6, md: 12 },
         position: 'relative',
         scrollSnapAlign: { xs: 'none', md: 'start' },
         scrollSnapStop: { xs: 'none', md: 'always' },
@@ -36,7 +36,7 @@ const AboutSection: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
       }}>
-        <Grid container spacing={4} sx={{ 
+        <Grid container spacing={3} sx={{ 
           height: '100%',
           alignItems: 'center',
         }}>
@@ -45,7 +45,7 @@ const AboutSection: React.FC = () => {
               <Typography
                 variant="h2"
                 sx={{
-                  mb: 4,
+                  mb: { xs: 1.5, md: 4 },
                   fontWeight: 700,
                   fontSize: { xs: '2rem', md: '2.5rem' },
                 }}
@@ -55,10 +55,10 @@ const AboutSection: React.FC = () => {
               <Typography
                 variant="body1"
                 sx={{
-                  mb: 4,
+                  mb: { xs: 1.5, md: 4 },
                   color: 'text.secondary',
-                  fontSize: '1.1rem',
-                  lineHeight: 1.8,
+                  fontSize: { xs: '1rem', md: '1.1rem' },
+                  lineHeight: { xs: 1.6, md: 1.8 },
                 }}
               >
                 {personalInfo.about.introduction}
@@ -66,10 +66,10 @@ const AboutSection: React.FC = () => {
               <Typography
                 variant="body1"
                 sx={{
-                  mb: 6,
+                  mb: { xs: 2, md: 6 },
                   color: 'text.secondary',
-                  fontSize: '1.1rem',
-                  lineHeight: 1.8,
+                  fontSize: { xs: '1rem', md: '1.1rem' },
+                  lineHeight: { xs: 1.6, md: 1.8 },
                 }}
               >
                 {personalInfo.about.additional}
@@ -78,7 +78,7 @@ const AboutSection: React.FC = () => {
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <Grid container spacing={3}>
+            <Grid container spacing={1.5}>
               {skills.map((skill, index) => (
                 <Grid item xs={6} key={skill.category}>
                   <motion.div
@@ -90,8 +90,8 @@ const AboutSection: React.FC = () => {
                     <Paper
                       elevation={0}
                       sx={{
-                        p: 3,
-                        height: '280px',
+                        p: { xs: 1, md: 3 },
+                        height: { xs: '180px', md: '280px' },
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
@@ -105,13 +105,16 @@ const AboutSection: React.FC = () => {
                         },
                       }}
                     >
-                      {iconMap[skill.icon as keyof typeof iconMap]}
+                      <Box sx={{ mt: { xs: 0, md: 1 } }}>
+                        {iconMap[skill.icon as keyof typeof iconMap]}
+                      </Box>
                       <Typography
                         variant="h6"
                         sx={{
-                          mt: 2,
-                          mb: 2,
+                          mt: { xs: 0.5, md: 2 },
+                          mb: { xs: 0.5, md: 2 },
                           fontWeight: 600,
+                          fontSize: { xs: '0.9rem', md: '1.25rem' },
                         }}
                       >
                         {skill.category}
@@ -119,12 +122,25 @@ const AboutSection: React.FC = () => {
                       <Box sx={{ 
                         display: 'flex', 
                         flexDirection: 'column', 
-                        gap: 1,
+                        gap: { xs: 0.3, md: 1 },
                         flex: 1,
-                        justifyContent: 'center'
+                        justifyContent: 'center',
+                        overflow: 'hidden',
+                        width: '100%',
+                        px: { xs: 0.5, md: 1 },
                       }}>
                         {skill.items.map((item) => (
-                          <Typography key={item} variant="body2" color="text.secondary">
+                          <Typography 
+                            key={item} 
+                            variant="body2" 
+                            color="text.secondary"
+                            sx={{ 
+                              fontSize: { xs: '0.75rem', md: '1rem' },
+                              lineHeight: { xs: 1.3, md: 1.2 },
+                              letterSpacing: { xs: 0, md: 0.3 },
+                              fontWeight: { xs: 'normal', md: 400 },
+                            }}
+                          >
                             {item}
                           </Typography>
                         ))}

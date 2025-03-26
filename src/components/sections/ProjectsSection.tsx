@@ -31,9 +31,9 @@ const ProjectsSection: React.FC = () => {
       component="section"
       id="projects"
       sx={{
-        minHeight: '100vh',
+        minHeight: { xs: 'auto', md: '100vh' },
         height: { xs: 'auto', md: '100vh' },
-        py: { xs: 4, md: 8 }, // Reduced padding
+        py: { xs: 8, md: 8 }, // 從12減小到8
         position: 'relative',
         scrollSnapAlign: { xs: 'none', md: 'start' },
         scrollSnapStop: { xs: 'none', md: 'always' },
@@ -51,10 +51,10 @@ const ProjectsSection: React.FC = () => {
           <Typography
             variant="h2"
             sx={{
-              mb: 4, // Reduced from 6 to 4
+              mb: { xs: 3, md: 4 }, // 移動版從mb: 4減小到mb: 3
               textAlign: 'center',
               fontWeight: 700,
-              fontSize: { xs: '2rem', md: '2.5rem' } // Added for better scaling
+              fontSize: { xs: '2rem', md: '2.5rem' } 
             }}
           >
             My Projects
@@ -63,11 +63,11 @@ const ProjectsSection: React.FC = () => {
           <Box
             sx={{
               display: 'flex',
-              gap: { xs: 2, md: 4 }, // Reduced gap
+              gap: { xs: 1.5, md: 4 }, // 移動版從gap: 2減小到gap: 1.5
               overflowX: 'auto',
-              pb: 3, // Reduced padding
-              mx: { xs: -1, md: -2 }, // Reduced margin
-              px: { xs: 1, md: 2 }, // Reduced padding
+              pb: { xs: 2, md: 3 }, // 移動版從pb: 3減小到pb: 2
+              mx: { xs: -0.5, md: -2 }, // 移動版從mx: -1減小到mx: -0.5
+              px: { xs: 0.5, md: 2 }, // 移動版從px: 1減小到px: 0.5
               '&::-webkit-scrollbar': {
                 height: 4,
               },
@@ -83,7 +83,7 @@ const ProjectsSection: React.FC = () => {
                 },
               },
               scrollSnapType: 'x mandatory',
-              scrollPadding: { xs: '0 16px', md: '0 24px' },
+              scrollPadding: { xs: '0 8px', md: '0 24px' }, // 移動版從'0 16px'減小到'0 8px'
             }}
           >
             {projects.map((project, index) => (
@@ -95,8 +95,8 @@ const ProjectsSection: React.FC = () => {
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 viewport={{ once: true }}
                 sx={{
-                  minWidth: { xs: '80vw', sm: '70vw', md: '35%' }, // Reduced from 80vw to 70vw on mobile, 45% to 30% on desktop
-                  maxWidth: { xs: '80vw', sm: '70vw', md: '35%' }, // Same reduction
+                  minWidth: { xs: '75vw', sm: '65vw', md: '35%' }, // 移動版從80vw/70vw減小到75vw/65vw
+                  maxWidth: { xs: '75vw', sm: '65vw', md: '35%' }, // 移動版從80vw/70vw減小到75vw/65vw
                   scrollSnapAlign: 'center',
                   cursor: 'pointer',
                   backgroundColor: 'background.paper',
@@ -112,7 +112,7 @@ const ProjectsSection: React.FC = () => {
               >
                 <CardMedia
                   component="img"
-                  height="175"
+                  height="150" // 從175減小到150
                   image={project.image}
                   alt={project.title}
                   sx={{
@@ -121,13 +121,15 @@ const ProjectsSection: React.FC = () => {
                     borderColor: 'primary.main',
                   }}
                 />
-                <CardContent sx={{ p: { xs: 1.5, md: 2.5 } }}> {/* Reduced padding */}
+                <CardContent sx={{ p: { xs: 1.2, md: 2.5 } }}> {/* 移動版從p: 1.5減小到p: 1.2 */}
                   <Typography 
                     variant="h5" 
                     gutterBottom
                     sx={{ 
-                      fontSize: { xs: '1.3rem', md: '1.6rem' }, // Reduced font size
-                      mb: { xs: 0.5, md: 1.5 } // Reduced margin
+                      fontSize: { xs: '1.2rem', md: '1.6rem' }, // 移動版從1.3rem減小到1.2rem
+                      mb: { xs: 0.3, md: 1.5 }, // 移動版從0.5減小到0.3
+                      fontFamily: "'Poppins', sans-serif",
+                      fontWeight: 700
                     }}
                   >
                     {project.title}
@@ -136,21 +138,21 @@ const ProjectsSection: React.FC = () => {
                     variant="body1"
                     sx={{
                       color: 'text.secondary',
-                      mb: 2, // Reduced margin
-                      fontSize: { xs: '0.9rem', md: '1.1rem' }, // Reduced font size
-                      lineHeight: 1.5, // Reduced line height
+                      mb: { xs: 1.5, md: 2 }, // 移動版從mb: 2減小到mb: 1.5
+                      fontSize: { xs: '0.85rem', md: '1.1rem' }, // 移動版從0.9rem減小到0.85rem
+                      lineHeight: 1.4, // 從1.5減小到1.4
                     }}
                     overflow="hidden"
                     textOverflow="ellipsis"
                   >
                     {project.description}
                   </Typography>
-                  <Box sx={{ flexGrow: 1 }} />  {/* This pushes the chips to the bottom */}
+                  <Box sx={{ flexGrow: 1 }} />
                   <Box sx={{ 
                     display: 'flex', 
                     flexWrap: 'wrap', 
-                    gap: 0.75,
-                  }}> {/* Reduced gap and margin */}
+                    gap: 0.5, // 從0.75減小到0.5
+                  }}>
                     {project.technologies.map((tech, index) => (
                       <Chip
                         key={index}
@@ -159,8 +161,8 @@ const ProjectsSection: React.FC = () => {
                         sx={{
                           backgroundColor: 'primary.main',
                           color: 'background.paper',
-                          fontSize: { xs: '0.7rem', md: '0.9rem' }, // Reduced font size
-                          height: { xs: '22px', md: '28px' }, // Reduced height
+                          fontSize: { xs: '0.65rem', md: '0.9rem' }, // 移動版從0.7rem減小到0.65rem
+                          height: { xs: '20px', md: '28px' }, // 移動版從22px減小到20px
                         }}
                       />
                     ))}

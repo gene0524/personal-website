@@ -44,12 +44,12 @@ const ExperienceSection: React.FC = () => {
       component="section"
       id="experience"
       sx={{
-        minHeight: '100vh',
-        height: '100vh',
-        py: { xs: 8, md: 12 },
+        minHeight: { xs: 'auto', md: '100vh' },
+        height: { xs: 'auto', md: '100vh' },
+        py: { xs: 6, md: 12 },
         position: 'relative',
-        scrollSnapAlign: 'start',
-        scrollSnapStop: 'always',
+        scrollSnapAlign: { xs: 'none', md: 'start' },
+        scrollSnapStop: { xs: 'none', md: 'always' },
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -59,7 +59,7 @@ const ExperienceSection: React.FC = () => {
       <Typography
         variant="h2"
         sx={{
-          mb: 4,
+          mb: { xs: 3, md: 4 },
           fontWeight: 700,
           fontSize: { xs: '2rem', md: '2.5rem' },
         }}
@@ -71,13 +71,25 @@ const ExperienceSection: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
       }}>
-        <Grid container spacing={4} sx={{ 
+        <Grid container spacing={3} sx={{ 
           height: '100%',
           alignItems: 'center',
         }}>
           {/* Timeline */}
           <Grid item xs={12} md={4}>
-            <Stepper activeStep={activeStep} orientation="vertical" nonLinear>
+            <Stepper 
+              activeStep={activeStep} 
+              orientation="vertical" 
+              nonLinear
+              sx={{
+                '& .MuiStepConnector-line': {
+                  minHeight: { xs: '20px', md: '40px' },
+                },
+                '& .MuiStepLabel-root': {
+                  py: { xs: 0.5, md: 1 },
+                }
+              }}
+            >
               {experiences.map((exp, index) => (
                 <Step key={exp.title}>
                   <StepButton onClick={() => handleStepClick(index)}>
@@ -88,15 +100,29 @@ const ExperienceSection: React.FC = () => {
                           pr: 2,
                         },
                         '& .MuiStepLabel-label': {
-                          fontSize: { xs: '1.1rem', md: '1.25rem' },
+                          fontSize: { xs: '1rem', md: '1.25rem' },
                         },
                       }}
                     >
                       <Box>
-                        <Typography variant="subtitle1" fontWeight="bold" sx={{ fontSize: { xs: '1.1rem', md: '1.25rem' } }}>
+                        <Typography 
+                          variant="subtitle1" 
+                          fontWeight="bold" 
+                          sx={{ 
+                            fontSize: { xs: '1rem', md: '1.25rem' },
+                            lineHeight: { xs: 1.2, md: 1.4 }
+                          }}
+                        >
                           {exp.period}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '1rem', md: '1.1rem' } }}>
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary" 
+                          sx={{ 
+                            fontSize: { xs: '0.9rem', md: '1.1rem' },
+                            lineHeight: { xs: 1.2, md: 1.4 }
+                          }}
+                        >
                           {exp.company}
                         </Typography>
                       </Box>
@@ -112,7 +138,7 @@ const ExperienceSection: React.FC = () => {
             <Paper
               elevation={0}
               sx={{
-                p: 4,
+                p: { xs: 2.5, md: 4 },
                 height: '100%',
                 border: '1px solid',
                 borderColor: 'divider',
@@ -130,16 +156,46 @@ const ExperienceSection: React.FC = () => {
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <Typography variant="h4" gutterBottom>
+                  <Typography 
+                    variant="h4" 
+                    gutterBottom 
+                    sx={{ 
+                      fontSize: { xs: '1.4rem', md: '2rem' },
+                      mb: { xs: 0.5, md: 1 }
+                    }}
+                  >
                     {experiences[activeStep].title}
                   </Typography>
-                  <Typography variant="h6" color="primary" gutterBottom>
+                  <Typography 
+                    variant="h6" 
+                    color="primary" 
+                    gutterBottom 
+                    sx={{ 
+                      fontSize: { xs: '1.1rem', md: '1.25rem' },
+                      mb: { xs: 0.5, md: 1 }
+                    }}
+                  >
                     {experiences[activeStep].company}
                   </Typography>
-                  <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+                  <Typography 
+                    variant="subtitle1" 
+                    color="text.secondary" 
+                    gutterBottom 
+                    sx={{ 
+                      fontSize: { xs: '0.9rem', md: '1rem' },
+                      mb: { xs: 1, md: 1.5 }
+                    }}
+                  >
                     {experiences[activeStep].period}
                   </Typography>
-                  <Typography variant="body1" sx={{ mt: 4 }}>
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      mt: { xs: 1, md: 4 },
+                      fontSize: { xs: '0.9rem', md: '1rem' },
+                      lineHeight: { xs: 1.4, md: 1.6 }
+                    }}
+                  >
                     {experiences[activeStep].description}
                   </Typography>
                 </motion.div>

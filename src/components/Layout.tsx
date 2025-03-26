@@ -191,14 +191,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 >
                   GY
                 </Typography>
-                <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 2 }}>
+                <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1.5 }}>
                   {navItems.map((item) => (
                     <Button
                       key={item}
                       sx={{
                         color: 'text.primary',
                         textTransform: 'none',
-                        fontSize: '1.1rem',
+                        fontSize: '1rem',
+                        padding: '4px 8px',
+                        minWidth: '60px',
                         '&:hover': {
                           color: 'primary.main',
                         },
@@ -215,17 +217,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     target="_blank"
                     rel="noopener noreferrer"
                     sx={{
-                      ml: 2,
+                      ml: 1.5,
                       backgroundColor: 'primary.main',
                       color: 'background.paper',
                       textTransform: 'none',
-                      fontSize: '1rem',
+                      fontSize: '0.9rem',
                       fontWeight: 600,
-                      borderRadius: '20px',
-                      px: 2,
-                      py: 0.75,
+                      borderRadius: '18px',
+                      px: 1.5,
+                      py: 0.6,
                       minWidth: 'auto',
-                      height: '36px',
+                      height: '32px',
                       '&:hover': {
                         backgroundColor: 'primary.dark',
                         transform: 'translateY(-2px)',
@@ -262,9 +264,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {drawer}
       </Drawer>
       
-      <Toolbar />
+      <Toolbar sx={{ mb: { xs: 3, md: 0 } }} />
       
-      <Container component="main" sx={{ mt: 4, mb: 4, flex: 1 }}>
+      <Container component="main" sx={{ mt: { xs: 1, md: 4 }, mb: 4, flex: 1 }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
