@@ -13,7 +13,7 @@ export const projects = [
     description: 'Microservices-based recipe discovery platform with secure user management',
     longDescription: 'Architected a scalable web application using microservices on Azure and Supabase for database solutions. Implemented CI/CD pipelines to automate deployment processes across environments. Developed the core Food Finder feature with secure user onboarding and recipe discovery APIs, resulting in an intuitive and responsive user experience.',
     image: '/assets/images/projects/foodHub.png',
-    technologies: ['Azure', 'Supabase', 'CI/CD', 'API Development', 'React', 'JavaScript'],
+    technologies: ['Azure', 'Supabase', 'CI/CD', 'RESTful API', 'JavaScript', 'HTML', 'CSS'],
     githubUrl: 'https://github.com/jhteh2000/sse-team-project-2',
     demoUrl: 'https://www.youtube.com/watch?v=TE_hPw_ofTg'
   },
@@ -34,13 +34,13 @@ export const projects = [
     technologies: ['MATLAB', 'Signal Processing', 'IMU Sensors', 'Algorithm Design', 'Data Analysis'],
     paperUrl: 'https://www.mdpi.com/1424-8220/22/16/6244',
   },
-  // {
-  //   title: 'Personal Portfolio Website',
-  //   description: 'A responsive developer portfolio showcasing my projects and experience',
-  //   longDescription: 'Designed and developed a modern, responsive portfolio website to showcase my projects, skills, and experience. Implemented smooth animations, dark/light mode toggle, and interactive elements to create an engaging user experience. Built with performance and accessibility in mind using modern web technologies.',
-  //   image: '/assets/images/projects/portfolio-website.jpg',
-  //   technologies: ['React', 'Next.js', 'Tailwind CSS', 'Framer Motion', 'Responsive Design'],
-  //   githubUrl: 'https://github.com/yourusername/portfolio-website',
-  //   liveUrl: 'https://yourdomainname.com',
-  // },
+  {
+    title: 'Personal Website',
+    description: 'A responsive developer portfolio showcasing my projects and experience',
+    longDescription: 'Designed and developed a modern, responsive portfolio website to showcase my projects, skills, and experience. Implemented smooth animations and interactive elements to create an engaging user experience. Built with performance and accessibility in mind using modern web technologies.',
+    image: '/assets/images/projects/portfolio-website.png',
+    technologies: ['React', 'Next.js', 'Tailwind CSS', 'Framer Motion', 'Responsive Design'],
+    githubUrl: 'https://github.com/gene0524/personal-website',
+    liveUrl: 'https://portfolio-geneyu.vercel.app/',
+  },
 ];

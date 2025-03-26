@@ -158,7 +158,7 @@ const ContactSection: React.FC = () => {
                 sx={{
                   p: 4,
                   width: '100%',
-                  height: '520px',
+                  height: '480px',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
@@ -178,7 +178,7 @@ const ContactSection: React.FC = () => {
                       variant="h3"
                       sx={{
                         mb: 3,
-                        fontWeight: 700,
+                        fontWeight: 600,
                       }}
                     >
                       Get in Touch
@@ -188,7 +188,7 @@ const ContactSection: React.FC = () => {
                       sx={{
                         mb: 6,
                         color: 'text.secondary',
-                        fontSize: '1.1rem',
+                        fontSize: '1rem',
                         lineHeight: 1.6,
                       }}
                     >
@@ -196,7 +196,7 @@ const ContactSection: React.FC = () => {
                       opportunities to be part of your visions.
                     </Typography>
 
-                    <Box sx={{ mb: 6 }}>
+                    <Box sx={{ mb: 4 }}>
                       <Box 
                         component="a"
                         href={`mailto:${displayContactInfo.email}`}
@@ -213,7 +213,7 @@ const ContactSection: React.FC = () => {
                         }}
                       >
                         <EmailIcon sx={{ mr: 2, color: 'primary.main', fontSize: '1.5rem' }} />
-                        <Typography sx={{ fontSize: '1.1rem' }}>{displayContactInfo.email}</Typography>
+                        <Typography sx={{ fontSize: '1rem' }}>{displayContactInfo.email}</Typography>
                       </Box>
                       <Box 
                         component="a"
@@ -231,11 +231,11 @@ const ContactSection: React.FC = () => {
                         }}
                       >
                         <PhoneIcon sx={{ mr: 2, color: 'primary.main', fontSize: '1.5rem' }} />
-                        <Typography sx={{ fontSize: '1.1rem' }}>{displayContactInfo.phone}</Typography>
+                        <Typography sx={{ fontSize: '1rem' }}>{displayContactInfo.phone}</Typography>
                       </Box>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <LocationOnIcon sx={{ mr: 2, color: 'primary.main', fontSize: '1.5rem' }} />
-                        <Typography sx={{ fontSize: '1.1rem' }}>{displayContactInfo.location}</Typography>
+                        <Typography sx={{ fontSize: '1rem' }}>{displayContactInfo.location}</Typography>
                       </Box>
                     </Box>
                   </Box>
@@ -311,7 +311,7 @@ const ContactSection: React.FC = () => {
                 sx={{ 
                   p: 4, 
                   width: '100%',
-                  height: '520px',
+                  height: '480px',
                   display: 'flex',
                   flexDirection: 'column',
                   background: 'rgba(255, 255, 255, 0.05)',
@@ -323,7 +323,7 @@ const ContactSection: React.FC = () => {
                   variant="h3"
                   sx={{
                     mb: 4,
-                    fontWeight: 700,
+                    fontWeight: 600,
                   }}
                 >
                   Send Message
@@ -351,7 +351,7 @@ const ContactSection: React.FC = () => {
                       helperText={errors.name}
                       InputLabelProps={{
                         sx: {
-                          fontSize: '1.1rem',
+                          fontSize: '1rem',
                         },
                       }}
                       InputProps={{
@@ -387,7 +387,7 @@ const ContactSection: React.FC = () => {
                       helperText={errors.email}
                       InputLabelProps={{
                         sx: {
-                          fontSize: '1.1rem',
+                          fontSize: '1rem',
                         },
                       }}
                       InputProps={{
@@ -417,7 +417,7 @@ const ContactSection: React.FC = () => {
                       label="Message"
                       name="message"
                       multiline
-                      rows={4}
+                      rows={3}
                       value={formData.message}
                       onChange={handleChange}
                       error={!!errors.message}

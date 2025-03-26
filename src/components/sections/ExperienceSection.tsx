@@ -59,9 +59,9 @@ const ExperienceSection: React.FC = () => {
       <Typography
         variant="h2"
         sx={{
-          mb: 6,
+          mb: 4,
           fontWeight: 700,
-          fontSize: { xs: '2.2rem', md: '3rem' },
+          fontSize: { xs: '2rem', md: '2.5rem' },
         }}
       >
         Experience

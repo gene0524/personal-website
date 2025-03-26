@@ -47,7 +47,7 @@ const AboutSection: React.FC = () => {
                 sx={{
                   mb: 4,
                   fontWeight: 700,
-                  fontSize: { xs: '2.5rem', md: '3.5rem' },
+                  fontSize: { xs: '2rem', md: '2.5rem' },
                 }}
               >
                 About Me

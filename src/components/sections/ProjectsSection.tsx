@@ -33,7 +33,7 @@ const ProjectsSection: React.FC = () => {
       sx={{
         minHeight: '100vh',
         height: { xs: 'auto', md: '100vh' },
-        py: { xs: 8, md: 12 },
+        py: { xs: 4, md: 8 }, // Reduced padding
         position: 'relative',
         scrollSnapAlign: { xs: 'none', md: 'start' },
         scrollSnapStop: { xs: 'none', md: 'always' },
@@ -51,9 +51,10 @@ const ProjectsSection: React.FC = () => {
           <Typography
             variant="h2"
             sx={{
-              mb: 6,
+              mb: 4, // Reduced from 6 to 4
               textAlign: 'center',
               fontWeight: 700,
+              fontSize: { xs: '2rem', md: '2.5rem' } // Added for better scaling
             }}
           >
             My Projects
@@ -62,11 +63,11 @@ const ProjectsSection: React.FC = () => {
           <Box
             sx={{
               display: 'flex',
-              gap: { xs: 3, md: 6 },
+              gap: { xs: 2, md: 4 }, // Reduced gap
               overflowX: 'auto',
-              pb: 4,
-              mx: { xs: -2, md: -4 },
-              px: { xs: 2, md: 4 },
+              pb: 3, // Reduced padding
+              mx: { xs: -1, md: -2 }, // Reduced margin
+              px: { xs: 1, md: 2 }, // Reduced padding
               '&::-webkit-scrollbar': {
                 height: 4,
               },
@@ -94,8 +95,8 @@ const ProjectsSection: React.FC = () => {
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 viewport={{ once: true }}
                 sx={{
-                  minWidth: { xs: '80vw', md: '45%' },
-                  maxWidth: { xs: '80vw', md: '45%' },
+                  minWidth: { xs: '80vw', sm: '70vw', md: '35%' }, // Reduced from 80vw to 70vw on mobile, 45% to 30% on desktop
+                  maxWidth: { xs: '80vw', sm: '70vw', md: '35%' }, // Same reduction
                   scrollSnapAlign: 'center',
                   cursor: 'pointer',
                   backgroundColor: 'background.paper',
@@ -111,7 +112,7 @@ const ProjectsSection: React.FC = () => {
               >
                 <CardMedia
                   component="img"
-                  height="250"
+                  height="175"
                   image={project.image}
                   alt={project.title}
                   sx={{
@@ -120,13 +121,13 @@ const ProjectsSection: React.FC = () => {
                     borderColor: 'primary.main',
                   }}
                 />
-                <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                <CardContent sx={{ p: { xs: 1.5, md: 2.5 } }}> {/* Reduced padding */}
                   <Typography 
                     variant="h5" 
                     gutterBottom
                     sx={{ 
-                      fontSize: { xs: '1.5rem', md: '1.75rem' },
-                      mb: { xs: 1, md: 2 }
+                      fontSize: { xs: '1.3rem', md: '1.6rem' }, // Reduced font size
+                      mb: { xs: 0.5, md: 1.5 } // Reduced margin
                     }}
                   >
                     {project.title}
@@ -135,14 +136,21 @@ const ProjectsSection: React.FC = () => {
                     variant="body1"
                     sx={{
                       color: 'text.secondary',
-                      mb: 3,
-                      fontSize: { xs: '1rem', md: '1.25rem' },
-                      lineHeight: 1.6,
+                      mb: 2, // Reduced margin
+                      fontSize: { xs: '0.9rem', md: '1.1rem' }, // Reduced font size
+                      lineHeight: 1.5, // Reduced line height
                     }}
+                    overflow="hidden"
+                    textOverflow="ellipsis"
                   >
                     {project.description}
                   </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                  <Box sx={{ flexGrow: 1 }} />  {/* This pushes the chips to the bottom */}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexWrap: 'wrap', 
+                    gap: 0.75,
+                  }}> {/* Reduced gap and margin */}
                     {project.technologies.map((tech, index) => (
                       <Chip
                         key={index}
@@ -151,8 +159,8 @@ const ProjectsSection: React.FC = () => {
                         sx={{
                           backgroundColor: 'primary.main',
                           color: 'background.paper',
-                          fontSize: { xs: '0.8rem', md: '1rem' },
-                          height: { xs: '24px', md: '32px' },
+                          fontSize: { xs: '0.7rem', md: '0.9rem' }, // Reduced font size
+                          height: { xs: '22px', md: '28px' }, // Reduced height
                         }}
                       />
                     ))}
@@ -172,7 +180,7 @@ const ProjectsSection: React.FC = () => {
       >
         {selectedProject && (
           <>
-            <DialogTitle sx={{ fontSize: { xs: '1.5rem', md: '2rem' } }}>{selectedProject.title}</DialogTitle>
+            <DialogTitle sx={{ fontSize: { xs: '1.4rem', md: '1.8rem' } }}>{selectedProject.title}</DialogTitle>
             <DialogContent>
               <Box sx={{ mb: 2 }}>
                 <img
@@ -189,13 +197,13 @@ const ProjectsSection: React.FC = () => {
                 variant="body1" 
                 paragraph
                 sx={{
-                  fontSize: { xs: '1.1rem', md: '1.25rem' },
-                  lineHeight: 1.6,
+                  fontSize: { xs: '1rem', md: '1.1rem' }, // Reduced font size
+                  lineHeight: 1.5, // Reduced line height
                 }}
               >
                 {selectedProject.longDescription}
               </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}> {/* Reduced gap and margin */}
                 {selectedProject.technologies.map((tech) => (
                   <Chip
                     key={tech}
@@ -204,8 +212,8 @@ const ProjectsSection: React.FC = () => {
                     sx={{
                       backgroundColor: 'primary.main',
                       color: 'background.paper',
-                      fontSize: { xs: '0.9rem', md: '1rem' },
-                      height: { xs: '28px', md: '32px' },
+                      fontSize: { xs: '0.8rem', md: '0.9rem' }, // Reduced font size
+                      height: { xs: '24px', md: '28px' }, // Reduced height
                     }}
                   />
                 ))}
@@ -219,7 +227,7 @@ const ProjectsSection: React.FC = () => {
                   href={selectedProject.githubUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  sx={{ fontSize: { xs: '0.9rem', md: '1rem' } }}
+                  sx={{ fontSize: { xs: '0.8rem', md: '0.9rem' } }} // Reduced font size
                 >
                   GitHub
                 </Button>
@@ -231,7 +239,7 @@ const ProjectsSection: React.FC = () => {
                   href={selectedProject.demoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  sx={{ fontSize: { xs: '0.9rem', md: '1rem' } }}
+                  sx={{ fontSize: { xs: '0.8rem', md: '0.9rem' } }} // Reduced font size
                 >
                   Demo
                 </Button>
@@ -243,7 +251,7 @@ const ProjectsSection: React.FC = () => {
                   href={selectedProject.paperUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  sx={{ fontSize: { xs: '0.9rem', md: '1rem' } }}
+                  sx={{ fontSize: { xs: '0.8rem', md: '0.9rem' } }} // Reduced font size
                 >
                   Paper
                 </Button>
@@ -256,4 +264,4 @@ const ProjectsSection: React.FC = () => {
   );
 };
 
-export default ProjectsSection; 
+export default ProjectsSection;
