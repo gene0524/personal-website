@@ -5,6 +5,18 @@ import ScienceIcon from '@mui/icons-material/Science';
 
 export const experiences = [
     {
+      title: 'Software Engineer',
+      company: 'xSyphon (Data Socket Limited)',
+      period: 'Apr. 2025 - Present',
+      description: 'Here at xSyphon, we are building AI-powered forex trading platform.\
+                    As a DevOps Engineer, I am responsible for building and maintaining \
+                    the infrastructure that powers our trading platform. I have developed \
+                    a GPT-integrated query system and am currently architecting a centralized \
+                    analytics platform that powers real-time trading decisions for dealers \
+                    and internal services.',
+      icon: WorkIcon,
+    },
+    {
       title: 'MSc in Computing, with Distinction',
       company: 'Imperial College London',
       period: '2023 - 2024',
