@@ -99,7 +99,7 @@ const ExperienceSection: React.FC = () => {
                         variant="subtitle2"
                         sx={{
                           fontWeight: 700,
-                          fontSize: { xs: '0.85rem', md: '0.95rem' },
+                          fontSize: { xs: '0.9rem', md: '1rem' },
                           color: isActive ? 'text.primary' : 'text.secondary',
                           transition: 'color 0.3s',
                           fontFamily: '"Space Mono", monospace',
@@ -110,7 +110,7 @@ const ExperienceSection: React.FC = () => {
                       <Typography
                         variant="body2"
                         sx={{
-                          fontSize: { xs: '0.8rem', md: '0.88rem' },
+                          fontSize: { xs: '0.88rem', md: '0.95rem' },
                           color: isActive ? 'primary.main' : 'text.secondary',
                           transition: 'color 0.3s',
                           lineHeight: 1.3,

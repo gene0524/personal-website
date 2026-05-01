@@ -41,6 +41,7 @@ const handleTiltEnter = (e: React.MouseEvent<HTMLElement>) => {
 
 const ProjectsSection: React.FC = () => {
   const [selectedProject, setSelectedProject] = useState<(typeof projects)[0] | null>(null);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const theme = useTheme();
 
   return (
@@ -66,6 +67,7 @@ const ProjectsSection: React.FC = () => {
             display: 'flex',
             gap: { xs: 1.5, md: 3.5 },
             overflowX: 'auto',
+            pt: { xs: 2, md: 3 },
             pb: { xs: 2, md: 3 },
             mx: { xs: -0.5, md: -2 },
             px: { xs: 0.5, md: 2 },
@@ -84,14 +86,16 @@ const ProjectsSection: React.FC = () => {
             <Box
               key={project.title}
               onMouseMove={handleTiltMove}
-              onMouseLeave={handleTiltLeave}
-              onMouseEnter={handleTiltEnter}
+              onMouseLeave={(e) => { handleTiltLeave(e); setHoveredIndex(null); }}
+              onMouseEnter={(e) => { handleTiltEnter(e); setHoveredIndex(index); }}
               sx={{
                 minWidth: { xs: '75vw', sm: '60vw', md: '34%' },
                 maxWidth: { xs: '75vw', sm: '60vw', md: '34%' },
                 scrollSnapAlign: 'center',
                 flexShrink: 0,
                 transformStyle: 'preserve-3d',
+                opacity: hoveredIndex === null || hoveredIndex === index ? 1 : 0.25,
+                transition: 'opacity 0.3s ease',
               }}
             >
               <Card
@@ -141,7 +145,7 @@ const ProjectsSection: React.FC = () => {
                     sx={{
                       color: 'text.secondary',
                       mb: { xs: 1.5, md: 2 },
-                      fontSize: { xs: '0.85rem', md: '1rem' },
+                      fontSize: { xs: '0.92rem', md: '1rem' },
                       lineHeight: 1.5,
                     }}
                   >
@@ -157,8 +161,8 @@ const ProjectsSection: React.FC = () => {
                           backgroundColor: 'rgba(0,255,157,0.1)',
                           color: 'primary.main',
                           border: '1px solid rgba(0,255,157,0.25)',
-                          fontSize: { xs: '0.65rem', md: '0.8rem' },
-                          height: { xs: '20px', md: '26px' },
+                          fontSize: { xs: '0.72rem', md: '0.8rem' },
+                          height: { xs: '22px', md: '26px' },
                           fontFamily: '"Space Mono", monospace',
                         }}
                       />

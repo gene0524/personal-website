@@ -4,24 +4,23 @@ export const useScrollSpy = () => {
   const [activeSection, setActiveSection] = useState<string>('hero');
 
   useEffect(() => {
-    const handleScroll = () => {
-      const sections = document.querySelectorAll('section[id]');
-      
-      sections.forEach((section: Element) => {
-        const sectionTop = (section as HTMLElement).offsetTop - 100;
-        const sectionHeight = (section as HTMLElement).offsetHeight;
-        const scroll = window.scrollY;
-        const windowHeight = window.innerHeight;
-
-        if (scroll >= sectionTop && scroll < sectionTop + sectionHeight) {
-          setActiveSection(section.getAttribute('id') || 'hero');
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter(e => e.isIntersecting);
+        if (visible.length > 0) {
+          const most = visible.reduce((a, b) =>
+            a.intersectionRatio > b.intersectionRatio ? a : b
+          );
+          setActiveSection(most.target.id);
         }
-      });
-    };
+      },
+      { threshold: [0.3, 0.5, 0.7] }
+    );
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const sections = document.querySelectorAll('section[id]');
+    sections.forEach(s => observer.observe(s));
+    return () => observer.disconnect();
   }, []);
 
   return activeSection;
-}; 
+};

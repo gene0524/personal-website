@@ -34,7 +34,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
 
-  const navItems = ['Home', 'About', 'Experience', 'Projects', 'Contact'];
+  const navItems = ['Home', 'About', 'Experience', 'Projects', 'Travel', 'Contact'];
 
   useEffect(() => {
     const handleScroll = () => {
@@ -65,6 +65,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       'about': 'about',
       'experience': 'experience',
       'projects': 'projects',
+      'travel': 'travel',
       'contact': 'contact',
     };
 
@@ -264,9 +265,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {drawer}
       </Drawer>
       
-      <Toolbar sx={{ mb: { xs: 3, md: 0 } }} />
+      <Toolbar />
       
-      <Container component="main" sx={{ mt: { xs: 1, md: 4 }, mb: 4, flex: 1 }}>
+      <Box component="main" sx={{ flex: 1, width: '100%' }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -274,7 +275,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         >
           {children}
         </motion.div>
-      </Container>
+      </Box>
 
       <Box component="footer" sx={{ 
         py: 3, 
@@ -284,7 +285,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       }}>
         <Container maxWidth="sm">
           <Typography variant="body2" color="text.secondary" align="center">
-            © {new Date().getFullYear()} My Portfolio. All rights reserved.
+            © {new Date().getFullYear()} Gene Yu
           </Typography>
         </Container>
       </Box>

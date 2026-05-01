@@ -74,11 +74,16 @@ const AboutSection: React.FC = () => {
                       transition={{ duration: 0.5, delay: index * 0.1 }}
                       viewport={{ once: true }}
                     >
-                      {/* Flip card wrapper */}
+                      {/* Flip card wrapper — hover on desktop, tap on touch */}
                       <Box
                         sx={{ perspective: '1200px', height: { xs: '160px', md: '230px' } }}
                         onMouseEnter={() => setFlippedIndex(index)}
                         onMouseLeave={() => setFlippedIndex(null)}
+                        onClick={() => {
+                          if (window.matchMedia('(hover: none)').matches) {
+                            setFlippedIndex(prev => prev === index ? null : index);
+                          }
+                        }}
                       >
                         <Box
                           sx={{

@@ -1,3 +1,4 @@
+import React, { Suspense, lazy } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Layout from './components/Layout';
@@ -8,8 +9,11 @@ import ProjectsSection from './components/sections/ProjectsSection';
 import ContactSection from './components/sections/ContactSection';
 import SocialLinks from './components/SocialLinks';
 import CustomCursor from './components/CustomCursor';
-import { Box } from '@mui/material';
+import ScrollIndicator from './components/ScrollIndicator';
+import { Box, CircularProgress } from '@mui/material';
 import { modernTechTheme, typography, components } from './themes';
+
+const TravelSection = lazy(() => import('./components/sections/TravelSection'));
 
 const theme = createTheme({
   ...modernTechTheme,
@@ -25,6 +29,7 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <CustomCursor />
+      <ScrollIndicator />
       <Box
         sx={{
           height: '100vh',
@@ -52,6 +57,13 @@ function App() {
           <AboutSection />
           <ExperienceSection />
           <ProjectsSection />
+          <Suspense fallback={
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+              <CircularProgress color="primary" />
+            </Box>
+          }>
+            <TravelSection />
+          </Suspense>
           <ContactSection />
           <SocialLinks />
         </Layout>

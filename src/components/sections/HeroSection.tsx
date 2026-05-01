@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, Container, Typography, Grid } from '@mui/material';
 import { motion } from 'framer-motion';
 import { personalInfo } from '../../data/personalInfo';
+import ParticleNetwork from '../ParticleNetwork';
 
 const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$&*';
 
@@ -101,42 +102,7 @@ const HeroSection: React.FC = () => {
         justifyContent: 'center',
       }}
     >
-      {/* Background orb 1 */}
-      <Box sx={{
-        position: 'absolute',
-        top: '10%',
-        right: '5%',
-        width: { xs: 200, md: 480 },
-        height: { xs: 200, md: 480 },
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(0,255,157,0.07) 0%, transparent 70%)',
-        filter: 'blur(30px)',
-        pointerEvents: 'none',
-        zIndex: 0,
-        animation: 'orb1 7s ease-in-out infinite',
-        '@keyframes orb1': {
-          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
-          '50%': { transform: 'translate(-24px, 18px) scale(1.08)' },
-        },
-      }} />
-      {/* Background orb 2 */}
-      <Box sx={{
-        position: 'absolute',
-        bottom: '15%',
-        left: '5%',
-        width: { xs: 150, md: 320 },
-        height: { xs: 150, md: 320 },
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(0,216,255,0.05) 0%, transparent 70%)',
-        filter: 'blur(25px)',
-        pointerEvents: 'none',
-        zIndex: 0,
-        animation: 'orb2 9s ease-in-out infinite',
-        '@keyframes orb2': {
-          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
-          '50%': { transform: 'translate(18px, -20px) scale(1.05)' },
-        },
-      }} />
+      <ParticleNetwork />
 
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
         <Grid container spacing={4} alignItems="center">

@@ -3,10 +3,11 @@ import { Box, Typography } from '@mui/material';
 interface SectionHeadingProps {
   number: string;
   title: string;
+  mb?: number | string | Record<string, number | string>;
 }
 
-const SectionHeading = ({ number, title }: SectionHeadingProps) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 3, md: 5 } }}>
+const SectionHeading = ({ number, title, mb = { xs: 3, md: 5 } }: SectionHeadingProps) => (
+  <Box sx={{ display: 'flex', alignItems: 'center', mb }}>
     <Typography
       component="span"
       sx={{

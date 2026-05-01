@@ -521,7 +521,7 @@ const ContactSection: React.FC = () => {
         display: 'flex',
         flexDirection: 'column',
       }}>
-        <SectionHeading number="04." title="Contact" />
+        <SectionHeading number="05." title="Contact" />
         <Grid container spacing={2} sx={{
           height: '100%',
           alignItems: 'center',

@@ -39,7 +39,7 @@ export const projects = [
     description: 'A responsive developer portfolio showcasing my projects and experience',
     longDescription: 'Designed and developed a modern, responsive portfolio website to showcase my projects, skills, and experience. Implemented smooth animations and interactive elements to create an engaging user experience. Built with performance and accessibility in mind using modern web technologies.',
     image: '/assets/images/projects/portfolio-website.png',
-    technologies: ['React', 'Next.js', 'Tailwind CSS', 'Framer Motion', 'Responsive Design'],
+    technologies: ['React', 'TypeScript', 'Vite', 'MUI', 'Framer Motion', 'Three.js'],
     githubUrl: 'https://github.com/gene0524/personal-website',
     liveUrl: 'https://portfolio-geneyu.vercel.app/',
   },

@@ -5,15 +5,10 @@ import ScienceIcon from '@mui/icons-material/Science';
 
 export const experiences = [
     {
-      title: 'Software Engineer',
-      company: 'xSyphon (Data Socket Limited)',
+      title: 'Software Engineer — Platform & DevOps',
+      company: 'xSyphon · London',
       period: 'Apr. 2025 - Present',
-      description: 'Here at xSyphon, we are building AI-powered forex trading platform.\
-                    As a DevOps Engineer, I am responsible for building and maintaining \
-                    the infrastructure that powers our trading platform. I have developed \
-                    a GPT-integrated query system and am currently architecting a centralized \
-                    analytics platform that powers real-time trading decisions for dealers \
-                    and internal services.',
+      description: 'Building and maintaining core platform infrastructure for a real-time trading environment — distributed data pipelines, low-latency backend services, and a full DevOps stack covering CI/CD, deployment, monitoring, and cloud security. Also contributing to AI-powered internal tools and workflow automation, working closely with trading operations as the company shifts toward AI-native engineering.',
       icon: WorkIcon,
     },
     {
