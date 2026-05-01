@@ -9,8 +9,8 @@ import {
   Step,
   StepLabel,
   StepButton,
-  StepIconProps,
 } from '@mui/material';
+import type { StepIconProps } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import WorkIcon from '@mui/icons-material/Work';
 import SchoolIcon from '@mui/icons-material/School';

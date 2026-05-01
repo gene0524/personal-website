@@ -13,10 +13,8 @@ import {
   InputAdornment,
   FormControl,
   FormHelperText,
-  TextFieldProps,
-  SxProps,
-  Theme,
 } from '@mui/material';
+import type { TextFieldProps, SxProps, Theme } from '@mui/material';
 import { motion } from 'framer-motion';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';

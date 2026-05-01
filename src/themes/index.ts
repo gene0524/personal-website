@@ -1,5 +1,5 @@
-import { ThemeOptions, Components, Theme } from '@mui/material/styles';
-import { TypographyOptions } from '@mui/material/styles/createTypography';
+import type { ThemeOptions, Components, Theme } from '@mui/material/styles';
+import type { TypographyOptions } from '@mui/material/styles/createTypography';
 
 export const modernTechTheme: ThemeOptions = {
   palette: {
