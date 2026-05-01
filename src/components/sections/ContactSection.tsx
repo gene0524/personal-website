@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import SectionHeading from '../SectionHeading';
 import {
   Box,
   Typography,
@@ -515,12 +516,13 @@ const ContactSection: React.FC = () => {
         justifyContent: 'center',
       }}
     >
-      <Container maxWidth="lg" sx={{ 
+      <Container maxWidth="lg" sx={{
         height: 'auto',
         display: 'flex',
-        alignItems: 'center',
+        flexDirection: 'column',
       }}>
-        <Grid container spacing={2} sx={{ 
+        <SectionHeading number="04." title="Contact" />
+        <Grid container spacing={2} sx={{
           height: '100%',
           alignItems: 'center',
         }}>

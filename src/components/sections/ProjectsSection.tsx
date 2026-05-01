@@ -6,7 +6,6 @@ import {
   Card,
   CardContent,
   CardMedia,
-  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -14,16 +13,34 @@ import {
   Button,
   Chip,
   useTheme,
-  Grid,
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import ArticleIcon from '@mui/icons-material/Article';
 import YouTubeIcon from '@mui/icons-material/YouTube';
 import { projects } from '../../data/projects';
+import SectionHeading from '../SectionHeading';
+
+const handleTiltMove = (e: React.MouseEvent<HTMLElement>) => {
+  const el = e.currentTarget;
+  const rect = el.getBoundingClientRect();
+  const relX = (e.clientX - rect.left) / rect.width - 0.5;
+  const relY = (e.clientY - rect.top) / rect.height - 0.5;
+  el.style.transform = `perspective(900px) rotateX(${-relY * 10}deg) rotateY(${relX * 10}deg) scale(1.02)`;
+};
+
+const handleTiltLeave = (e: React.MouseEvent<HTMLElement>) => {
+  e.currentTarget.style.transition = 'transform 0.4s ease';
+  e.currentTarget.style.transform =
+    'perspective(900px) rotateX(0deg) rotateY(0deg) scale(1)';
+};
+
+const handleTiltEnter = (e: React.MouseEvent<HTMLElement>) => {
+  e.currentTarget.style.transition = 'transform 0.1s ease';
+};
 
 const ProjectsSection: React.FC = () => {
-  const [selectedProject, setSelectedProject] = useState<typeof projects[0] | null>(null);
+  const [selectedProject, setSelectedProject] = useState<(typeof projects)[0] | null>(null);
   const theme = useTheme();
 
   return (
@@ -33,7 +50,7 @@ const ProjectsSection: React.FC = () => {
       sx={{
         minHeight: { xs: 'auto', md: '100vh' },
         height: { xs: 'auto', md: '100vh' },
-        py: { xs: 8, md: 8 }, // 從12減小到8
+        py: { xs: 8, md: 8 },
         position: 'relative',
         scrollSnapAlign: { xs: 'none', md: 'start' },
         scrollSnapStop: { xs: 'none', md: 'always' },
@@ -41,137 +58,117 @@ const ProjectsSection: React.FC = () => {
         alignItems: 'center',
       }}
     >
-      <Container maxWidth="lg" sx={{ height: 'auto' }}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true }}
-        >
-          <Typography
-            variant="h2"
-            sx={{
-              mb: { xs: 3, md: 4 }, // 移動版從mb: 4減小到mb: 3
-              textAlign: 'center',
-              fontWeight: 700,
-              fontSize: { xs: '2rem', md: '2.5rem' } 
-            }}
-          >
-            My Projects
-          </Typography>
+      <Container maxWidth="lg">
+        <SectionHeading number="03." title="Projects" />
 
-          <Box
-            sx={{
-              display: 'flex',
-              gap: { xs: 1.5, md: 4 }, // 移動版從gap: 2減小到gap: 1.5
-              overflowX: 'auto',
-              pb: { xs: 2, md: 3 }, // 移動版從pb: 3減小到pb: 2
-              mx: { xs: -0.5, md: -2 }, // 移動版從mx: -1減小到mx: -0.5
-              px: { xs: 0.5, md: 2 }, // 移動版從px: 1減小到px: 0.5
-              '&::-webkit-scrollbar': {
-                height: 4,
-              },
-              '&::-webkit-scrollbar-track': {
-                backgroundColor: 'background.paper',
-                borderRadius: 2,
-              },
-              '&::-webkit-scrollbar-thumb': {
-                backgroundColor: 'primary.main',
-                borderRadius: 2,
-                '&:hover': {
-                  backgroundColor: 'primary.dark',
-                },
-              },
-              scrollSnapType: 'x mandatory',
-              scrollPadding: { xs: '0 8px', md: '0 24px' }, // 移動版從'0 16px'減小到'0 8px'
-            }}
-          >
-            {projects.map((project, index) => (
+        <Box
+          sx={{
+            display: 'flex',
+            gap: { xs: 1.5, md: 3.5 },
+            overflowX: 'auto',
+            pb: { xs: 2, md: 3 },
+            mx: { xs: -0.5, md: -2 },
+            px: { xs: 0.5, md: 2 },
+            scrollSnapType: 'x mandatory',
+            '&::-webkit-scrollbar': { height: 4 },
+            '&::-webkit-scrollbar-track': { backgroundColor: 'background.paper', borderRadius: 2 },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'primary.main',
+              borderRadius: 2,
+              '&:hover': { backgroundColor: 'primary.dark' },
+            },
+          }}
+        >
+          {projects.map((project, index) => (
+            /* Tilt wrapper — separate from framer-motion to avoid transform conflict */
+            <Box
+              key={project.title}
+              onMouseMove={handleTiltMove}
+              onMouseLeave={handleTiltLeave}
+              onMouseEnter={handleTiltEnter}
+              sx={{
+                minWidth: { xs: '75vw', sm: '60vw', md: '34%' },
+                maxWidth: { xs: '75vw', sm: '60vw', md: '34%' },
+                scrollSnapAlign: 'center',
+                flexShrink: 0,
+                transformStyle: 'preserve-3d',
+              }}
+            >
               <Card
-                key={project.title}
                 component={motion.div}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 viewport={{ once: true }}
+                onClick={() => setSelectedProject(project)}
                 sx={{
-                  minWidth: { xs: '75vw', sm: '65vw', md: '35%' }, // 移動版從80vw/70vw減小到75vw/65vw
-                  maxWidth: { xs: '75vw', sm: '65vw', md: '35%' }, // 移動版從80vw/70vw減小到75vw/65vw
-                  scrollSnapAlign: 'center',
                   cursor: 'pointer',
                   backgroundColor: 'background.paper',
                   border: '1px solid',
-                  borderColor: 'primary.main',
-                  transition: 'all 0.3s ease',
+                  borderColor: 'rgba(0,255,157,0.25)',
+                  height: '100%',
                   '&:hover': {
-                    transform: 'translateY(-8px)',
-                    boxShadow: '0 12px 30px rgba(0, 255, 157, 0.2)',
+                    borderColor: 'primary.main',
+                    boxShadow: '0 16px 40px rgba(0,255,157,0.12)',
                   },
+                  transition: 'border-color 0.3s, box-shadow 0.3s',
                 }}
-                onClick={() => setSelectedProject(project)}
               >
                 <CardMedia
                   component="img"
-                  height="150" // 從175減小到150
+                  height="150"
                   image={project.image}
                   alt={project.title}
                   sx={{
                     objectFit: 'cover',
-                    borderBottom: '1px solid',
-                    borderColor: 'primary.main',
+                    borderBottom: '1px solid rgba(0,255,157,0.15)',
                   }}
                 />
-                <CardContent sx={{ p: { xs: 1.2, md: 2.5 } }}> {/* 移動版從p: 1.5減小到p: 1.2 */}
-                  <Typography 
-                    variant="h5" 
-                    gutterBottom
-                    sx={{ 
-                      fontSize: { xs: '1.2rem', md: '1.6rem' }, // 移動版從1.3rem減小到1.2rem
-                      mb: { xs: 0.3, md: 1.5 }, // 移動版從0.5減小到0.3
+                <CardContent sx={{ p: { xs: 1.5, md: 2.5 } }}>
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      fontSize: { xs: '1.1rem', md: '1.5rem' },
+                      mb: { xs: 0.5, md: 1 },
                       fontFamily: "'Poppins', sans-serif",
-                      fontWeight: 700
+                      fontWeight: 700,
                     }}
                   >
                     {project.title}
                   </Typography>
                   <Typography
-                    variant="body1"
+                    variant="body2"
                     sx={{
                       color: 'text.secondary',
-                      mb: { xs: 1.5, md: 2 }, // 移動版從mb: 2減小到mb: 1.5
-                      fontSize: { xs: '0.85rem', md: '1.1rem' }, // 移動版從0.9rem減小到0.85rem
-                      lineHeight: 1.4, // 從1.5減小到1.4
+                      mb: { xs: 1.5, md: 2 },
+                      fontSize: { xs: '0.85rem', md: '1rem' },
+                      lineHeight: 1.5,
                     }}
-                    overflow="hidden"
-                    textOverflow="ellipsis"
                   >
                     {project.description}
                   </Typography>
-                  <Box sx={{ flexGrow: 1 }} />
-                  <Box sx={{ 
-                    display: 'flex', 
-                    flexWrap: 'wrap', 
-                    gap: 0.5, // 從0.75減小到0.5
-                  }}>
-                    {project.technologies.map((tech, index) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {project.technologies.map(tech => (
                       <Chip
-                        key={index}
+                        key={tech}
                         label={tech}
                         size="small"
                         sx={{
-                          backgroundColor: 'primary.main',
-                          color: 'background.paper',
-                          fontSize: { xs: '0.65rem', md: '0.9rem' }, // 移動版從0.7rem減小到0.65rem
-                          height: { xs: '20px', md: '28px' }, // 移動版從22px減小到20px
+                          backgroundColor: 'rgba(0,255,157,0.1)',
+                          color: 'primary.main',
+                          border: '1px solid rgba(0,255,157,0.25)',
+                          fontSize: { xs: '0.65rem', md: '0.8rem' },
+                          height: { xs: '20px', md: '26px' },
+                          fontFamily: '"Space Mono", monospace',
                         }}
                       />
                     ))}
                   </Box>
                 </CardContent>
               </Card>
-            ))}
-          </Box>
-        </motion.div>
+            </Box>
+          ))}
+        </Box>
       </Container>
 
       <Dialog
@@ -182,40 +179,31 @@ const ProjectsSection: React.FC = () => {
       >
         {selectedProject && (
           <>
-            <DialogTitle sx={{ fontSize: { xs: '1.4rem', md: '1.8rem' } }}>{selectedProject.title}</DialogTitle>
+            <DialogTitle sx={{ fontSize: { xs: '1.4rem', md: '1.8rem' } }}>
+              {selectedProject.title}
+            </DialogTitle>
             <DialogContent>
               <Box sx={{ mb: 2 }}>
                 <img
                   src={selectedProject.image}
                   alt={selectedProject.title}
-                  style={{
-                    width: '100%',
-                    height: 'auto',
-                    borderRadius: theme.shape.borderRadius,
-                  }}
+                  style={{ width: '100%', height: 'auto', borderRadius: theme.shape.borderRadius }}
                 />
               </Box>
-              <Typography 
-                variant="body1" 
-                paragraph
-                sx={{
-                  fontSize: { xs: '1rem', md: '1.1rem' }, // Reduced font size
-                  lineHeight: 1.5, // Reduced line height
-                }}
-              >
+              <Typography variant="body1" paragraph sx={{ fontSize: { xs: '1rem', md: '1.05rem' }, lineHeight: 1.6 }}>
                 {selectedProject.longDescription}
               </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}> {/* Reduced gap and margin */}
-                {selectedProject.technologies.map((tech) => (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                {selectedProject.technologies.map(tech => (
                   <Chip
                     key={tech}
                     label={tech}
                     size="small"
                     sx={{
-                      backgroundColor: 'primary.main',
-                      color: 'background.paper',
-                      fontSize: { xs: '0.8rem', md: '0.9rem' }, // Reduced font size
-                      height: { xs: '24px', md: '28px' }, // Reduced height
+                      backgroundColor: 'rgba(0,255,157,0.1)',
+                      color: 'primary.main',
+                      border: '1px solid rgba(0,255,157,0.25)',
+                      fontFamily: '"Space Mono", monospace',
                     }}
                   />
                 ))}
@@ -229,7 +217,6 @@ const ProjectsSection: React.FC = () => {
                   href={selectedProject.githubUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  sx={{ fontSize: { xs: '0.8rem', md: '0.9rem' } }} // Reduced font size
                 >
                   GitHub
                 </Button>
@@ -241,7 +228,6 @@ const ProjectsSection: React.FC = () => {
                   href={selectedProject.demoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  sx={{ fontSize: { xs: '0.8rem', md: '0.9rem' } }} // Reduced font size
                 >
                   Demo
                 </Button>
@@ -253,7 +239,6 @@ const ProjectsSection: React.FC = () => {
                   href={selectedProject.paperUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  sx={{ fontSize: { xs: '0.8rem', md: '0.9rem' } }} // Reduced font size
                 >
                   Paper
                 </Button>

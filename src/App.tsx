@@ -7,6 +7,7 @@ import ExperienceSection from './components/sections/ExperienceSection';
 import ProjectsSection from './components/sections/ProjectsSection';
 import ContactSection from './components/sections/ContactSection';
 import SocialLinks from './components/SocialLinks';
+import CustomCursor from './components/CustomCursor';
 import { Box } from '@mui/material';
 import { modernTechTheme, typography, components } from './themes';
 
@@ -23,6 +24,7 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
+      <CustomCursor />
       <Box
         sx={{
           height: '100vh',
