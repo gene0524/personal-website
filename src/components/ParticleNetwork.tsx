@@ -118,7 +118,7 @@ const ParticleNetwork = () => {
           const dy = particles[i].y - particles[j].y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < CONNECT_DIST) {
-            const alpha = (1 - dist / CONNECT_DIST) * 0.42;
+            const alpha = (1 - dist / CONNECT_DIST) * 0.35;
             ctx.beginPath();
             ctx.strokeStyle = `rgba(160,210,255,${alpha})`;
             ctx.lineWidth = 0.7;
