@@ -1,94 +1,108 @@
 # Gene Yu's Portfolio Website
 
-A modern, responsive portfolio website built with React, TypeScript, and Material-UI. This website showcases my professional experience, projects, and skills in an elegant and interactive way.
+A modern, responsive portfolio website built with React, TypeScript, and Vite. Showcases my professional experience, projects, and skills with a custom-designed dark UI and interactive animations.
+
+Live: [geneyu.me](https://geneyu.me)
 
 ## Features
 
-- 🎨 Modern UI with smooth animations
-- 📱 Fully responsive design
-- 🌙 Dark mode optimized
-- ⚡ Fast performance
-- 🔍 SEO optimized
+- Animated hero with text scramble + typewriter effect
+- Particle network background
+- Custom cursor and scroll indicator
+- Flip cards for experience and projects
+- Section-based scroll snapping
+- Fully responsive (mobile / tablet / desktop)
+- Dark-mode optimized colour palette
+- Open Graph + Twitter Card metadata for link previews
 
 ## Tech Stack
 
-- React
-- TypeScript
-- Material-UI
-- Framer Motion
-- Emotion
+- **Build**: Vite + TypeScript
+- **UI**: React, Material-UI, Emotion
+- **Animation**: Framer Motion
+- **Deployment**: Vercel
 
 ## Project Structure
 
 ```
 src/
-├── components/         # React components
-├── data/              # Content data files
-│   ├── personalInfo.ts    # Personal information
-│   ├── experience.ts      # Work experience
-│   ├── projects.ts        # Project showcase
-│   └── skills.ts          # Skills and technologies
-├── themes/            # Theme configuration
-└── assets/           # Static assets
+├── components/
+│   ├── CustomCursor.tsx
+│   ├── Layout.tsx
+│   ├── Logo.tsx
+│   ├── ParticleNetwork.tsx
+│   ├── ScrollIndicator.tsx
+│   ├── SectionHeading.tsx
+│   ├── SocialLinks.tsx
+│   └── sections/
+│       ├── HeroSection.tsx
+│       ├── AboutSection.tsx
+│       ├── ExperienceSection.tsx
+│       ├── ProjectsSection.tsx
+│       ├── TravelSection.tsx
+│       └── ContactSection.tsx
+├── data/                   # Content data files
+│   ├── personalInfo.ts
+│   ├── experience.ts
+│   ├── projects.ts
+│   ├── skills.ts
+│   ├── contactInfo.ts
+│   ├── social.ts
+│   ├── socialLinks.ts
+│   └── travel.ts
+├── hooks/                  # Custom React hooks
+└── themes/                 # Theme configuration
+
+public/
+├── og-image.png            # Open Graph preview image
+├── og-image.svg            # OG image source (regenerate via rsvg-convert)
+├── favicon.svg
+└── assets/
     └── images/
-        ├── profile/      # Profile photos
-        └── projects/     # Project screenshots
+        ├── profile/        # Profile photos
+        └── projects/       # Project screenshots
 ```
 
 ## Content Update Guide
 
-### Personal Information
-- Edit `src/data/personalInfo.ts` to update:
-  - Name
-  - Title
-  - Description
-  - About section content
-  - Contact information
-
-### Experience
-- Edit `src/data/experience.ts` to update your work and education history
-
-### Projects
-- Edit `src/data/projects.ts` to update your project showcase
-- Add project images to `public/assets/images/projects/`
-
-### Profile Photo
-- Replace your profile photo in `public/assets/images/profile/myPhoto.jpg`
-- Make sure to keep the same file name or update the reference in the code
-
-### Skills
-- Edit `src/data/skills.ts` to update your technical skills and tools
+| What to change          | File                                |
+| ----------------------- | ----------------------------------- |
+| Name / title / about    | `src/data/personalInfo.ts`          |
+| Work + education        | `src/data/experience.ts`            |
+| Project showcase        | `src/data/projects.ts`              |
+| Skills                  | `src/data/skills.ts`                |
+| Contact info            | `src/data/contactInfo.ts`           |
+| Social links            | `src/data/socialLinks.ts`           |
+| Travel map data         | `src/data/travel.ts`                |
+| Profile photo           | `public/assets/images/profile/myPhoto.jpg` |
+| Project screenshots     | `public/assets/images/projects/`    |
 
 ## Development
 
-1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/portfolio.git
-```
-
-2. Install dependencies
-```bash
+# Install dependencies
 npm install
-```
 
-3. Start development server
-```bash
-npm start
-```
+# Start dev server (http://localhost:5173)
+npm run dev
 
-4. Build for production
-```bash
+# Type-check + production build (output: dist/)
 npm run build
+
+# Preview production build locally
+npm run preview
 ```
 
 ## Deployment
 
-The site is built to be deployed on any static hosting service. The production build will be in the `build` folder.
+Deployed to Vercel. The repo includes a `vercel.json` that sets the output directory to `dist/`. Pushing to `main` triggers a production build.
 
 ## License
 
-MIT License - feel free to use this template for your own portfolio!
+All Rights Reserved © Gene Yu.
+
+The source code in this repository is published for portfolio and reference purposes only. You may not copy, redistribute, or reuse this code or its design without prior written permission.
 
 ## Contact
 
-Gene Yu - gene.yu.tw@gmail.com
+Gene Yu — gene.yu.tw@gmail.com
