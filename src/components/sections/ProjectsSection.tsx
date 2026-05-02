@@ -124,7 +124,7 @@ const ProjectsSection: React.FC = () => {
               sx={{
                 minWidth: { xs: '75vw', sm: '60vw', md: '34%' },
                 maxWidth: { xs: '75vw', sm: '60vw', md: '34%' },
-                scrollSnapAlign: 'center',
+                scrollSnapAlign: { xs: 'start', md: 'center' },
                 flexShrink: 0,
                 transformStyle: 'preserve-3d',
                 opacity: spotlightIndex === null || spotlightIndex === index ? 1 : 0.25,

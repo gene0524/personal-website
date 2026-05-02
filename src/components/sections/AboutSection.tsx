@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, Typography, Container, Grid } from '@mui/material';
 import { motion } from 'framer-motion';
 import CodeIcon from '@mui/icons-material/Code';
-import BrushIcon from '@mui/icons-material/Brush';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
 import StorageIcon from '@mui/icons-material/Storage';
 import CloudIcon from '@mui/icons-material/Cloud';
 import { personalInfo } from '../../data/personalInfo';
@@ -11,7 +11,7 @@ import SectionHeading from '../SectionHeading';
 
 const iconMap = {
   CodeIcon: CodeIcon,
-  BrushIcon: BrushIcon,
+  SmartToyIcon: SmartToyIcon,
   StorageIcon: StorageIcon,
   CloudIcon: CloudIcon,
 };
@@ -77,8 +77,12 @@ const AboutSection: React.FC = () => {
                       {/* Flip card wrapper — hover on desktop, tap on touch */}
                       <Box
                         sx={{ perspective: '1200px', height: { xs: '160px', md: '230px' } }}
-                        onMouseEnter={() => setFlippedIndex(index)}
-                        onMouseLeave={() => setFlippedIndex(null)}
+                        onMouseEnter={() => {
+                          if (!window.matchMedia('(hover: none)').matches) setFlippedIndex(index);
+                        }}
+                        onMouseLeave={() => {
+                          if (!window.matchMedia('(hover: none)').matches) setFlippedIndex(null);
+                        }}
                         onClick={() => {
                           if (window.matchMedia('(hover: none)').matches) {
                             setFlippedIndex(prev => prev === index ? null : index);
@@ -91,6 +95,8 @@ const AboutSection: React.FC = () => {
                             width: '100%',
                             height: '100%',
                             transformStyle: 'preserve-3d',
+                            WebkitTransformStyle: 'preserve-3d',
+                            willChange: 'transform',
                             transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
                             cursor: 'pointer',
                             transform: flippedIndex === index ? 'rotateY(180deg)' : 'rotateY(0deg)',

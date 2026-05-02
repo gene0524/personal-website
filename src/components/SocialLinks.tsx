@@ -86,7 +86,7 @@ const SocialLinks = () => {
       sx={{
         position: 'fixed',
         left: 0,
-        top: '42%',
+        top: '70%',
         transform: 'translateY(-50%)',
         zIndex: 1200,
         display: 'flex',

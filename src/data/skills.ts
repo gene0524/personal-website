@@ -1,13 +1,13 @@
 export const skills = [
   {
     category: 'Frontend',
-    items: ['React', 'TypeScript', 'JavaScript', 'HTML'],
+    items: ['React', 'TypeScript', 'JavaScript', 'CSS'],
     icon: 'CodeIcon'
   },
   {
-    category: 'Design',
-    items: ['UI/UX', 'Figma', 'Responsive Design'],
-    icon: 'BrushIcon'
+    category: 'AI & Agents',
+    items: ['OpenAI & Claude', 'MCP & Agents', 'LLM Integration', 'Prompt Engineering'],
+    icon: 'SmartToyIcon'
   },
   {
     category: 'Backend',
@@ -16,7 +16,7 @@ export const skills = [
   },
   {
     category: 'Cloud',
-    items: ['AWS', 'Docker', 'CI/CD', 'Git'],
+    items: ['AWS', 'Azure', 'Docker', 'CI/CD'],
     icon: 'CloudIcon'
   }
-]; 
+];
