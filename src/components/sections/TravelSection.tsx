@@ -122,7 +122,7 @@ const IdleHint: React.FC<{ count: number }> = ({ count }) => (
           opacity: 0.45,
         }}
       >
-        {/* {count} countries */}40+ countries · hover a glowing one
+        {/* {count} countries */}40+ countries · tap to explore · hold to zoom
       </Typography>
     </Box>
   </motion.div>
