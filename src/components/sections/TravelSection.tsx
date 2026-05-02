@@ -138,7 +138,8 @@ const TravelSection: React.FC = () => {
   const [pinnedVisit,    setPinnedVisit]    = useState<CountryVisit | null>(null);
   const [isZoomed,       setIsZoomed]       = useState(false);
   const [globeSize,      setGlobeSize]      = useState(420);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mouseDownPos     = useRef<{ x: number; y: number } | null>(null);
 
   const displayVisit = pinnedVisit ?? hoveredVisit;
 
@@ -172,11 +173,22 @@ const TravelSection: React.FC = () => {
     longPressTimer.current = setTimeout(() => triggerZoom(clientX, clientY), 500);
   }, [triggerZoom]);
 
-  // Mouse long-press (desktop)
+  // Mouse long-press (desktop) — cancel if mouse moves > 6px (i.e. user is rotating)
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    mouseDownPos.current = { x: e.clientX, y: e.clientY };
     const { clientX, clientY } = e;
     longPressTimer.current = setTimeout(() => triggerZoom(clientX, clientY), 500);
   }, [triggerZoom]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!longPressTimer.current || !mouseDownPos.current) return;
+    const dx = e.clientX - mouseDownPos.current.x;
+    const dy = e.clientY - mouseDownPos.current.y;
+    if (dx * dx + dy * dy > 36) { // 6px threshold
+      cancelLongPress();
+      mouseDownPos.current = null;
+    }
+  }, [cancelLongPress]);
 
   // Release pin when clicking empty globe space (ocean / non-visited)
   const handleGlobeClick = useCallback(() => {
@@ -312,6 +324,7 @@ const TravelSection: React.FC = () => {
             onTouchEnd={cancelLongPress}
             onTouchMove={cancelLongPress}
             onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
             onMouseUp={cancelLongPress}
             onMouseLeave={cancelLongPress}
             onContextMenu={(e) => e.preventDefault()}
@@ -334,34 +347,34 @@ const TravelSection: React.FC = () => {
               },
             }}
           >
-            {/* Zoom reset button — only shown when zoomed in on mobile */}
-            {isZoomed && (
-              <Box
-                onClick={resetZoom}
-                sx={{
-                  position: 'absolute',
-                  bottom: 12,
-                  right: 12,
-                  zIndex: 10,
-                  backgroundColor: 'rgba(0,0,0,0.72)',
-                  border: '1px solid rgba(0,255,157,0.4)',
-                  borderRadius: 2,
-                  px: 1.5,
-                  py: 0.6,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 0.5,
-                }}
-              >
-                <Typography sx={{ fontSize: '0.75rem', color: 'primary.main', fontFamily: '"Space Mono", monospace' }}>
-                  🔍 zoom out
-                </Typography>
-              </Box>
-            )}
-
+            {/* Wrapper sized to match the canvas so the button stays inside the globe */}
             {countries.length > 0 && (
-              <Globe
+              <Box sx={{ position: 'relative', width: globeSize, height: globeSize, flexShrink: 0 }}>
+                {isZoomed && (
+                  <Box
+                    onClick={resetZoom}
+                    sx={{
+                      position: 'absolute',
+                      bottom: 14,
+                      right: 14,
+                      zIndex: 10,
+                      backgroundColor: 'rgba(0,0,0,0.75)',
+                      border: '1px solid rgba(0,255,157,0.4)',
+                      borderRadius: 2,
+                      px: 1.5,
+                      py: 0.6,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                    }}
+                  >
+                    <Typography sx={{ fontSize: '0.75rem', color: 'primary.main', fontFamily: '"Space Mono", monospace' }}>
+                      🔍 zoom out
+                    </Typography>
+                  </Box>
+                )}
+                <Globe
                 ref={globeRef}
                 width={globeSize}
                 height={globeSize}
@@ -389,6 +402,7 @@ const TravelSection: React.FC = () => {
                 onGlobeClick={handleGlobeClick}
                 polygonsTransitionDuration={200}
               />
+              </Box>
             )}
           </Box>
 
