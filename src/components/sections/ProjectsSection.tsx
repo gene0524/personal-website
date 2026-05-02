@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -42,7 +42,38 @@ const handleTiltEnter = (e: React.MouseEvent<HTMLElement>) => {
 const ProjectsSection: React.FC = () => {
   const [selectedProject, setSelectedProject] = useState<(typeof projects)[0] | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [scrollActiveIndex, setScrollActiveIndex] = useState<number>(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<(HTMLElement | null)[]>([]);
   const theme = useTheme();
+
+  // On touch devices: track the most-centred card while scrolling
+  const updateScrollActive = useCallback(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const containerMid = container.getBoundingClientRect().left + container.clientWidth / 2;
+    let best = 0, bestDist = Infinity;
+    cardRefs.current.forEach((el, i) => {
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const dist = Math.abs(rect.left + rect.width / 2 - containerMid);
+      if (dist < bestDist) { bestDist = dist; best = i; }
+    });
+    setScrollActiveIndex(best);
+  }, []);
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container || !window.matchMedia('(hover: none)').matches) return;
+    container.addEventListener('scroll', updateScrollActive, { passive: true });
+    updateScrollActive();
+    return () => container.removeEventListener('scroll', updateScrollActive);
+  }, [updateScrollActive]);
+
+  // Spotlight index: hover takes priority on desktop; scroll-active on touch
+  const spotlightIndex = hoveredIndex !== null
+    ? hoveredIndex
+    : window.matchMedia('(hover: none)').matches ? scrollActiveIndex : null;
 
   return (
     <Box
@@ -63,6 +94,7 @@ const ProjectsSection: React.FC = () => {
         <SectionHeading number="03." title="Projects" />
 
         <Box
+          ref={scrollRef}
           sx={{
             display: 'flex',
             gap: { xs: 1.5, md: 3.5 },
@@ -85,6 +117,7 @@ const ProjectsSection: React.FC = () => {
             /* Tilt wrapper — separate from framer-motion to avoid transform conflict */
             <Box
               key={project.title}
+              ref={(el) => { cardRefs.current[index] = el as HTMLElement | null; }}
               onMouseMove={handleTiltMove}
               onMouseLeave={(e) => { handleTiltLeave(e); setHoveredIndex(null); }}
               onMouseEnter={(e) => { handleTiltEnter(e); setHoveredIndex(index); }}
@@ -94,7 +127,7 @@ const ProjectsSection: React.FC = () => {
                 scrollSnapAlign: 'center',
                 flexShrink: 0,
                 transformStyle: 'preserve-3d',
-                opacity: hoveredIndex === null || hoveredIndex === index ? 1 : 0.25,
+                opacity: spotlightIndex === null || spotlightIndex === index ? 1 : 0.25,
                 transition: 'opacity 0.3s ease',
               }}
             >

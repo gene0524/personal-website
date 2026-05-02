@@ -24,7 +24,7 @@ const toNumId = (f: GeoFeature) =>
   typeof f.id === 'string' ? parseInt(f.id, 10) : (f.id as number ?? -1);
 
 // ─── Hover card ────────────────────────────────────────────────────────────
-const CountryCard: React.FC<{ visit: CountryVisit }> = ({ visit }) => (
+const CountryCard: React.FC<{ visit: CountryVisit; isPinned?: boolean }> = ({ visit, isPinned }) => (
   <motion.div
     initial={{ opacity: 0, y: 12 }}
     animate={{ opacity: 1, y: 0 }}
@@ -45,10 +45,19 @@ const CountryCard: React.FC<{ visit: CountryVisit }> = ({ visit }) => (
     >
       <Typography
         variant="h5"
-        sx={{ fontWeight: 700, mb: 1.5, fontSize: { xs: '1.15rem', md: '1.3rem' } }}
+        sx={{ fontWeight: 700, mb: isPinned ? 0.5 : 1.5, fontSize: { xs: '1.15rem', md: '1.3rem' } }}
       >
         {visit.badge} {visit.name}
       </Typography>
+
+      {isPinned && (
+        <Typography
+          variant="caption"
+          sx={{ display: 'block', color: 'primary.main', fontFamily: '"Space Mono", monospace', fontSize: '0.7rem', mb: 1.5, opacity: 0.7 }}
+        >
+          📌 pinned · click again to release
+        </Typography>
+      )}
 
       {visit.photos.length > 0 && (
         <Box
@@ -123,10 +132,59 @@ const IdleHint: React.FC<{ count: number }> = ({ count }) => (
 const TravelSection: React.FC = () => {
   const globeRef    = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [countries,     setCountries]     = useState<GeoFeature[]>([]);
+  const [countries,      setCountries]      = useState<GeoFeature[]>([]);
   const [hoveredCountry, setHoveredCountry] = useState<GeoFeature | null>(null);
   const [hoveredVisit,   setHoveredVisit]   = useState<CountryVisit | null>(null);
+  const [pinnedVisit,    setPinnedVisit]    = useState<CountryVisit | null>(null);
+  const [isZoomed,       setIsZoomed]       = useState(false);
   const [globeSize,      setGlobeSize]      = useState(420);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const displayVisit = pinnedVisit ?? hoveredVisit;
+
+  const resetZoom = useCallback(() => {
+    globeRef.current?.pointOfView({ lat: 20, lng: 10, altitude: 1.8 }, 600);
+    setIsZoomed(false);
+  }, []);
+
+  // Shared zoom-in logic given a clientX/Y position
+  const triggerZoom = useCallback((clientX: number, clientY: number) => {
+    const canvas = containerRef.current?.querySelector('canvas');
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const coords = globeRef.current?.toGlobeCoords?.(clientX - rect.left, clientY - rect.top);
+    if (coords) {
+      globeRef.current.pointOfView({ lat: coords.lat, lng: coords.lng, altitude: 0.5 }, 600);
+      setIsZoomed(true);
+    }
+  }, []);
+
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  // Touch long-press
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const { clientX, clientY } = e.touches[0];
+    longPressTimer.current = setTimeout(() => triggerZoom(clientX, clientY), 500);
+  }, [triggerZoom]);
+
+  // Mouse long-press (desktop)
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    const { clientX, clientY } = e;
+    longPressTimer.current = setTimeout(() => triggerZoom(clientX, clientY), 500);
+  }, [triggerZoom]);
+
+  // Release pin when clicking empty globe space (ocean / non-visited)
+  const handleGlobeClick = useCallback(() => {
+    if (pinnedVisit) {
+      setPinnedVisit(null);
+      globeRef.current?.controls && (globeRef.current.controls().autoRotate = true);
+    }
+  }, [pinnedVisit]);
 
   // Fetch world atlas
   useEffect(() => {
@@ -176,11 +234,30 @@ const TravelSection: React.FC = () => {
     const f = feat as GeoFeature | null;
     setHoveredCountry(f);
     if (f) {
-      const visit = visitedCountries.find(c => c.id === toNumId(f));
-      setHoveredVisit(visit ?? null);
+      if (!pinnedVisit) {
+        setHoveredVisit(visitedCountries.find(c => c.id === toNumId(f)) ?? null);
+      }
       globeRef.current?.controls && (globeRef.current.controls().autoRotate = false);
     } else {
-      setHoveredVisit(null);
+      if (!pinnedVisit) {
+        setHoveredVisit(null);
+        globeRef.current?.controls && (globeRef.current.controls().autoRotate = true);
+      }
+    }
+  }, [pinnedVisit]);
+
+  const handleClick = useCallback((feat: object) => {
+    const f = feat as GeoFeature;
+    const visit = visitedCountries.find(c => c.id === toNumId(f));
+    if (visit) {
+      setPinnedVisit(prev => {
+        const unpinning = prev?.id === visit.id;
+        // Resume rotation when unpinning and not currently hovering
+        if (unpinning) globeRef.current?.controls && (globeRef.current.controls().autoRotate = true);
+        return unpinning ? null : visit;
+      });
+    } else {
+      setPinnedVisit(null);
       globeRef.current?.controls && (globeRef.current.controls().autoRotate = true);
     }
   }, []);
@@ -231,15 +308,47 @@ const TravelSection: React.FC = () => {
           {/* Globe */}
           <Box
             ref={containerRef}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={cancelLongPress}
+            onTouchMove={cancelLongPress}
+            onMouseDown={handleMouseDown}
+            onMouseUp={cancelLongPress}
+            onMouseLeave={cancelLongPress}
             sx={{
               flex: { md: '0 0 60%' },
               width: { xs: '100%', md: '60%' },
               display: 'flex',
               justifyContent: 'center',
-              // Strip the Three.js canvas background so it blends in
+              position: 'relative',
               '& canvas': { background: 'transparent !important' },
             }}
           >
+            {/* Zoom reset button — only shown when zoomed in on mobile */}
+            {isZoomed && (
+              <Box
+                onClick={resetZoom}
+                sx={{
+                  position: 'absolute',
+                  bottom: 12,
+                  right: 12,
+                  zIndex: 10,
+                  backgroundColor: 'rgba(0,0,0,0.72)',
+                  border: '1px solid rgba(0,255,157,0.4)',
+                  borderRadius: 2,
+                  px: 1.5,
+                  py: 0.6,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                }}
+              >
+                <Typography sx={{ fontSize: '0.75rem', color: 'primary.main', fontFamily: '"Space Mono", monospace' }}>
+                  🔍 zoom out
+                </Typography>
+              </Box>
+            )}
+
             {countries.length > 0 && (
               <Globe
                 ref={globeRef}
@@ -262,9 +371,11 @@ const TravelSection: React.FC = () => {
                 }}
                 onPolygonHover={handleHover}
                 onPolygonClick={(feat: object) => {
-                  // On touch devices hover doesn't fire — use click instead
+                  cancelLongPress();
                   if (window.matchMedia('(hover: none)').matches) handleHover(feat);
+                  handleClick(feat);
                 }}
+                onGlobeClick={handleGlobeClick}
                 polygonsTransitionDuration={200}
               />
             )}
@@ -282,8 +393,8 @@ const TravelSection: React.FC = () => {
             }}
           >
             <AnimatePresence mode="wait">
-              {hoveredVisit ? (
-                <CountryCard key={hoveredVisit.id} visit={hoveredVisit} />
+              {displayVisit ? (
+                <CountryCard key={displayVisit.id} visit={displayVisit} isPinned={!!pinnedVisit} />
               ) : (
                 <IdleHint key="hint" count={visitedCountries.length} />
               )}
