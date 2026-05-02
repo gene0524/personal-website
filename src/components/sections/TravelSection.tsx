@@ -314,13 +314,24 @@ const TravelSection: React.FC = () => {
             onMouseDown={handleMouseDown}
             onMouseUp={cancelLongPress}
             onMouseLeave={cancelLongPress}
+            onContextMenu={(e) => e.preventDefault()}
+            // eslint-disable-next-line react/forbid-component-props
+            style={{ WebkitTouchCallout: 'none' } as React.CSSProperties}
             sx={{
               flex: { md: '0 0 60%' },
               width: { xs: '100%', md: '60%' },
               display: 'flex',
               justifyContent: 'center',
               position: 'relative',
-              '& canvas': { background: 'transparent !important' },
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+              // Suppress iOS long-press callout and Android text selection
+              '& canvas': {
+                background: 'transparent !important',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                touchAction: 'none',
+              },
             }}
           >
             {/* Zoom reset button — only shown when zoomed in on mobile */}
