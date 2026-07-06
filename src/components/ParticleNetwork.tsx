@@ -29,9 +29,8 @@ const ParticleNetwork = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
-
     const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
       const w = canvas.offsetWidth;
       const h = canvas.offsetHeight;
       canvas.width = w * dpr;
@@ -40,6 +39,21 @@ const ParticleNetwork = () => {
     };
     resize();
     window.addEventListener('resize', resize);
+
+    // Pre-rendered glow sprite — same radial falloff as the previous
+    // per-frame createRadialGradient, but drawn once and blitted per particle.
+    const GLOW_SPRITE_R = 64;
+    const glowSprite = document.createElement('canvas');
+    glowSprite.width = glowSprite.height = GLOW_SPRITE_R * 2;
+    const gctx = glowSprite.getContext('2d')!;
+    const grad = gctx.createRadialGradient(
+      GLOW_SPRITE_R, GLOW_SPRITE_R, 0,
+      GLOW_SPRITE_R, GLOW_SPRITE_R, GLOW_SPRITE_R,
+    );
+    grad.addColorStop(0, 'rgba(100,180,255,1)');
+    grad.addColorStop(1, 'rgba(100,180,255,0)');
+    gctx.fillStyle = grad;
+    gctx.fillRect(0, 0, GLOW_SPRITE_R * 2, GLOW_SPRITE_R * 2);
 
     const cw = () => canvas.offsetWidth;
     const ch = () => canvas.offsetHeight;
@@ -138,13 +152,13 @@ const ParticleNetwork = () => {
 
         // Outer blue glow
         const glowRadius = p.radius * (nearMouse ? 5 : 3.5);
-        const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowRadius);
-        glow.addColorStop(0, `rgba(100,180,255,${nearMouse ? 0.35 : 0.18})`);
-        glow.addColorStop(1, 'rgba(100,180,255,0)');
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, glowRadius, 0, Math.PI * 2);
-        ctx.fillStyle = glow;
-        ctx.fill();
+        ctx.globalAlpha = nearMouse ? 0.35 : 0.18;
+        ctx.drawImage(
+          glowSprite,
+          p.x - glowRadius, p.y - glowRadius,
+          glowRadius * 2, glowRadius * 2,
+        );
+        ctx.globalAlpha = 1;
 
         // White core
         ctx.beginPath();
@@ -156,7 +170,18 @@ const ParticleNetwork = () => {
       rafRef.current = requestAnimationFrame(draw);
     };
 
-    draw();
+    // Only run the simulation while the hero canvas is actually visible.
+    let running = false;
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !running) {
+        running = true;
+        rafRef.current = requestAnimationFrame(draw);
+      } else if (!entry.isIntersecting && running) {
+        running = false;
+        cancelAnimationFrame(rafRef.current);
+      }
+    });
+    io.observe(canvas);
 
     const onMove = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
@@ -171,6 +196,7 @@ const ParticleNetwork = () => {
     window.addEventListener('mouseleave', onLeave);
 
     return () => {
+      io.disconnect();
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener('resize', resize);
       window.removeEventListener('mousemove', onMove);

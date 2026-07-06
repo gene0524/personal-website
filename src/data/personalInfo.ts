@@ -11,5 +11,5 @@ export const personalInfo = {
     phone: "+44 7904 548 316",
     location: "London, UK"
   },
-  avatarUrl: "/assets/images/profile/myPhoto.jpg"
+  avatarUrl: "/assets/images/profile/myPhoto.webp"
 }; 

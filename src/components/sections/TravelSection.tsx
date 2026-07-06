@@ -198,9 +198,9 @@ const TravelSection: React.FC = () => {
     }
   }, [pinnedVisit]);
 
-  // Fetch world atlas
+  // Fetch world atlas (self-hosted — see public/globe/)
   useEffect(() => {
-    fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+    fetch('/globe/countries-110m.json')
       .then(r => r.json())
       .then((topo: Topology) => {
         const geo = feature(
@@ -220,6 +220,21 @@ const TravelSection: React.FC = () => {
     g.controls().autoRotateSpeed = 0.4;
     g.controls().enableZoom      = false;
     g.pointOfView({ lat: 20, lng: 10, altitude: 1.8 }, 0);
+  }, [countries]);
+
+  // Pause the globe's render loop while the section is offscreen so it
+  // doesn't compete with scrolling elsewhere on the page.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || countries.length === 0) return;
+    const io = new IntersectionObserver(([entry]) => {
+      const g = globeRef.current;
+      if (!g?.pauseAnimation) return;
+      if (entry.isIntersecting) g.resumeAnimation();
+      else g.pauseAnimation();
+    }, { rootMargin: '100px' });
+    io.observe(el);
+    return () => io.disconnect();
   }, [countries]);
 
   // Responsive sizing via ResizeObserver
@@ -379,7 +394,7 @@ const TravelSection: React.FC = () => {
                 width={globeSize}
                 height={globeSize}
                 backgroundColor="rgba(0,0,0,0)"
-                globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
+                globeImageUrl="/globe/earth-night.jpg"
                 atmosphereColor="#00c8ff"
                 atmosphereAltitude={0.18}
                 polygonsData={countries}

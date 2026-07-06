@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Layout from './components/Layout';
@@ -14,6 +14,55 @@ import { Box, CircularProgress } from '@mui/material';
 import { modernTechTheme, typography, components } from './themes';
 
 const TravelSection = lazy(() => import('./components/sections/TravelSection'));
+
+// Defer mounting TravelSection (and its ~1.8MB three.js chunk) until the user
+// scrolls near it, so it doesn't compete with above-the-fold resources.
+// The placeholder keeps the #travel anchor and section height so nav links
+// and scroll-snap behave the same before the real section swaps in.
+const DeferredTravelSection: React.FC = () => {
+  const placeholderRef = useRef<HTMLDivElement>(null);
+  const [shouldLoad, setShouldLoad] = useState(false);
+
+  useEffect(() => {
+    const el = placeholderRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setShouldLoad(true);
+        io.disconnect();
+      }
+    }, { rootMargin: '1500px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  if (shouldLoad) {
+    return (
+      <Suspense fallback={
+        <Box
+          id="travel"
+          sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}
+        >
+          <CircularProgress color="primary" />
+        </Box>
+      }>
+        <TravelSection />
+      </Suspense>
+    );
+  }
+
+  return (
+    <Box
+      ref={placeholderRef}
+      id="travel"
+      sx={{
+        minHeight: '100vh',
+        scrollSnapAlign: { xs: 'none', md: 'start' },
+        scrollSnapStop: { xs: 'none', md: 'always' },
+      }}
+    />
+  );
+};
 
 const theme = createTheme({
   ...modernTechTheme,
@@ -57,13 +106,7 @@ function App() {
           <AboutSection />
           <ExperienceSection />
           <ProjectsSection />
-          <Suspense fallback={
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-              <CircularProgress color="primary" />
-            </Box>
-          }>
-            <TravelSection />
-          </Suspense>
+          <DeferredTravelSection />
           <ContactSection />
           <SocialLinks />
         </Layout>
