@@ -1,0 +1,960 @@
+{
+  "meta": {
+    "site": "https://www.geneyu.me",
+    "repo": "https://github.com/gene0524/personal-website",
+    "localPath": "~/Desktop/Projects/geneyu",
+    "auditDate": "2026-09-15",
+    "auditedCommit": "416b875",
+    "stack": "Vite 8 + React 19 + TypeScript + MUI 6 + Emotion + Framer Motion 12 + react-globe.gl (three.js), deployed on Vercel",
+    "method": "Full source read, live HTML/headers via curl, desktop 1440x900 + mobile 390x844 screenshots via puppeteer-core, Lighthouse 13 mobile + desktop, DOM/a11y probes",
+    "purpose": "Durable record of every finding so work can resume in a new session. Status field per item: todo | in-progress | done | wontfix.",
+    "lastUpdated": "2026-09-15 phase 0 implemented locally (uncommitted)"
+  },
+  "verdict": {
+    "oneLine": "Engineering fundamentals are decent; the 'generic' feeling comes from (1) an instantly recognisable Brittany Chiang v4 template look, (2) placeholder copy that says nothing specific about Gene, (3) several trust-breaking details (fake contact form, 'Photo Coming Soon' images, fonts not loading).",
+    "keepWhatWorks": [
+      "Dark theme, single-page scroll structure, section order (hero/about/experience/projects/travel/contact)",
+      "Interactive globe in Travel (the one genuinely personal, memorable element)",
+      "Build-time WebP pipeline (scripts/optimize-images.mjs), lazy globe chunk, offscreen animation pause",
+      "OG image, mobile accordion for experience, horizontal snap cards for projects",
+      "Lighthouse Best Practices 100 / SEO 100 on both form factors"
+    ]
+  },
+  "measurements": {
+    "lighthouse": {
+      "mobile": {
+        "performance": 81,
+        "accessibility": 94,
+        "bestPractices": 100,
+        "seo": 100,
+        "fcp": "3.1 s",
+        "lcp": "3.3 s",
+        "tbt": "250 ms",
+        "cls": 0,
+        "speedIndex": "3.1 s",
+        "tti": "3.6 s"
+      },
+      "desktop": {
+        "performance": 99,
+        "accessibility": 89,
+        "bestPractices": 100,
+        "seo": 100,
+        "fcp": "0.7 s",
+        "lcp": "0.8 s",
+        "tbt": "0 ms",
+        "cls": 0
+      },
+      "failingAudits": [
+        "heading-order",
+        "link-name",
+        "render-blocking-insight (Google Fonts CSS, est. 1,240 ms mobile)",
+        "image-delivery-insight (est. 258-284 KiB)",
+        "lcp-discovery-insight (LCP img not in initial HTML, no fetchpriority)",
+        "unused-javascript (est. 81 KiB of index bundle)",
+        "valid-source-maps"
+      ]
+    },
+    "bundle": {
+      "index.js": {
+        "raw": "650 KB",
+        "gzip": "200 KB",
+        "note": "MUI + Emotion + Framer Motion + React for a static page"
+      },
+      "TravelSection.js": {
+        "raw": "1.85 MB",
+        "gzip": "514 KB",
+        "note": "three.js via react-globe.gl; lazy-loaded when #travel placeholder is within 1500px"
+      },
+      "earth-night.jpg": {
+        "raw": "699 KB",
+        "note": "lives in public/globe/, bypasses the WebP pipeline"
+      },
+      "countries-110m.json": {
+        "raw": "108 KB",
+        "gzip": "39 KB"
+      },
+      "index.css": {
+        "raw": "0.35 KB"
+      },
+      "fullVisitTransfer": "~1.8 MB after scrolling through every section"
+    },
+    "headers": {
+      "apex": "geneyu.me -> 307 -> www.geneyu.me",
+      "cacheControlPublicAssets": "public, max-age=0, must-revalidate (images, globe assets, resume)",
+      "securityHeaders": "only strict-transport-security; no CSP, X-Content-Type-Options, Referrer-Policy, Permissions-Policy",
+      "sitemap": "does not exist; /sitemap.xml returns index.html (SPA fallback, 200 text/html)"
+    },
+    "domFacts": {
+      "h1": "Gene Yu (only present after JS scramble animation completes; empty in initial HTML)",
+      "realH2s": [
+        "the typewriter role line"
+      ],
+      "sectionTitlesAre": "<span> styled as h2 (SectionHeading.tsx uses variant=h2 component=span)",
+      "landmarks": {
+        "header": 1,
+        "nav": 0,
+        "main": 1,
+        "footer": 1
+      },
+      "linksWithoutAccessibleName": 3,
+      "tabOrder": "Home > About > Experience > Projects > Travel > Contact > Resume > project card div > email link; skill cards / scroll dots not focusable; Enter does not open project dialog",
+      "fontsActuallyLoaded": [
+        "Space Mono 400/700",
+        "Poppins 600/700"
+      ],
+      "fontsDeclaredButNotLoaded": [
+        "Inter (theme body font -> falls back to Roboto/Helvetica/Arial)",
+        "Space Grotesk (header logo)"
+      ],
+      "fontsLoadedButUnused": [
+        "Playfair Display 400/500/600/700"
+      ],
+      "navClickUpdatesHash": false,
+      "deepLinksWork": false,
+      "windowScrollYDuringScroll": 0
+    },
+    "after_phase0": {
+      "note": "Lighthouse mobile on local vite preview build; see terminal for numbers",
+      "bundle": {
+        "index.js": "648 KB / 203 KB gz",
+        "TravelSection.js": "1.84 MB / 521 KB gz",
+        "earth-night.webp": "70 KB",
+        "fonts": "latin subsets only are fetched (~48 KB Inter + ~8 KB per Poppins weight + ~16 KB per Space Mono weight)"
+      }
+    }
+  },
+  "findings": [
+    {
+      "id": "D1",
+      "category": "design",
+      "severity": "critical",
+      "status": "todo",
+      "title": "Visual language is the Brittany Chiang v4 template",
+      "evidence": "Palette values #0a192f / #112240 / #8892b0 / #e6f1ff are her exact theme tokens; plus 'Hi, my name is' opener, '01. About Me' numbered headings with trailing rule, bottom-left social icons on a horizontal line, monospace accent labels.",
+      "files": [
+        "src/themes/index.ts",
+        "src/components/SectionHeading.tsx",
+        "src/components/sections/HeroSection.tsx",
+        "src/components/SocialLinks.tsx"
+      ],
+      "fix": "See designDirection section. Change palette tokens, opener line, heading treatment, social strip. Keep dark mode, layout and section structure.",
+      "effort": "S",
+      "phase": 1
+    },
+    {
+      "id": "D2",
+      "category": "content",
+      "severity": "critical",
+      "status": "done",
+      "title": "Hero and About copy is generic filler",
+      "evidence": "personalInfo.description = 'I create elegant solutions to complex problems...'; about.introduction = 'passionate about creating effective digital solutions...'. Nothing specific to Gene. Real differentiators (trading-systems engineer, Imperial MSc Distinction, PAKDD 2026 + Sensors publications, 43 countries) are not above the fold.",
+      "files": [
+        "src/data/personalInfo.ts"
+      ],
+      "fix": "Rewrite from CV (see cvDelta). Hero: one line of what you do + one proof point. About: 2 short paragraphs, concrete.",
+      "effort": "S",
+      "phase": 1,
+      "resolution": "done: hero tagline + proof line + CTA buttons; about rewritten with concrete facts"
+    },
+    {
+      "id": "D3",
+      "category": "content",
+      "severity": "high",
+      "status": "in-progress",
+      "title": "Skills flip cards carry no information",
+      "evidence": "Front shows only a category word; back lists 'React, TypeScript, JavaScript, CSS'. Does not match CV skills (Python, C++, Java, SQL, R, MATLAB, Docker, AWS, Azure, CI/CD).",
+      "files": [
+        "src/data/skills.ts",
+        "src/components/sections/AboutSection.tsx"
+      ],
+      "fix": "Either drop the flip and show a flat, honest skill map grouped by what you actually ship, or replace with 'currently working with' + 'proof' links to projects.",
+      "effort": "S",
+      "phase": 1,
+      "resolution": "in-progress: skills data rebuilt from CV + certificates line; flip-card interaction kept for now"
+    },
+    {
+      "id": "D4",
+      "category": "design",
+      "severity": "high",
+      "status": "todo",
+      "title": "Six competing gimmicks, none excellent",
+      "evidence": "Text scramble, typewriter, particle network, custom cursor, card tilt, flip cards. Globe is the only memorable one and sits in section 4.",
+      "files": [
+        "src/components/sections/HeroSection.tsx",
+        "src/components/ParticleNetwork.tsx",
+        "src/components/CustomCursor.tsx",
+        "src/components/sections/ProjectsSection.tsx",
+        "src/components/sections/AboutSection.tsx"
+      ],
+      "fix": "Remove scramble + custom cursor + tilt + flip. Keep at most: subtle particles (or replace with glass-refraction background), typewriter, globe. Consider promoting globe or a globe-teaser into hero.",
+      "effort": "M",
+      "phase": 3
+    },
+    {
+      "id": "T1",
+      "category": "trust",
+      "severity": "critical",
+      "status": "done",
+      "title": "Contact form is fake",
+      "evidence": "ContactSection.handleSubmit only console.logs and shows 'Message sent successfully!' snackbar.",
+      "files": [
+        "src/components/sections/ContactSection.tsx"
+      ],
+      "fix": "Wire to Formspree / Web3Forms / Resend (via Vercel function), or delete the form and keep email + socials only.",
+      "effort": "S",
+      "phase": 0,
+      "resolution": "done: JSON POST to VITE_CONTACT_ENDPOINT when set, else pre-filled mailto; no fake success message"
+    },
+    {
+      "id": "T2",
+      "category": "trust",
+      "severity": "critical",
+      "status": "done",
+      "title": "24 of 43 countries show external 'Photo Coming Soon' placeholders",
+      "evidence": "src/data/travel.ts PH = https://placehold.co/400x300/... used for 24 entries; loaded from third-party domain.",
+      "files": [
+        "src/data/travel.ts",
+        "src/components/sections/TravelSection.tsx"
+      ],
+      "fix": "Set photos: [] for those countries and make CountryCard hide the photo strip when empty. Add real photos later via assets-src/travel/.",
+      "effort": "S",
+      "phase": 0,
+      "resolution": "done: placeholders removed, 23 countries now photos: []"
+    },
+    {
+      "id": "T3",
+      "category": "trust",
+      "severity": "high",
+      "status": "done",
+      "title": "Three different emails in code; phone number public",
+      "evidence": "contactInfo.ts = gene-yu-tw@gmail.com (what the site shows); personalInfo.ts + README + CV = gene.yu.tw@gmail.com; socialLinks.ts = gene0524@gmail.com. Phone +44 7904 548 316 rendered publicly.",
+      "files": [
+        "src/data/contactInfo.ts",
+        "src/data/personalInfo.ts",
+        "src/data/socialLinks.ts",
+        "README.md"
+      ],
+      "fix": "Single source of truth in personalInfo.ts. CV says gene.yu.tw@gmail.com. Remove phone from the site.",
+      "effort": "XS",
+      "phase": 0,
+      "openQuestion": "Email: CV says gene.yu.tw@gmail.com (treat as canonical unless told otherwise). Phone: confirmed remove.",
+      "resolution": "done: personalInfo is the single source; email gene.yu.tw@gmail.com; phone removed"
+    },
+    {
+      "id": "T4",
+      "category": "trust",
+      "severity": "medium",
+      "status": "todo",
+      "title": "README claims 'All Rights Reserved' on a design derived from a public MIT template",
+      "files": [
+        "README.md"
+      ],
+      "fix": "After redesign, either credit inspiration or relax the licence wording. Currently reads badly to anyone who recognises the template.",
+      "effort": "XS",
+      "phase": 1
+    },
+    {
+      "id": "B1",
+      "category": "bug",
+      "severity": "high",
+      "status": "todo",
+      "title": "Deep links (#projects etc.) do not work; nav never updates the URL",
+      "evidence": "Scroll container is an inner <Box overflowY=auto height=100vh> in App.tsx, not the document. Verified: location.hash stays '' after nav click; iframe loads of /#about land on hero.",
+      "files": [
+        "src/App.tsx",
+        "src/components/Layout.tsx",
+        "src/components/ScrollIndicator.tsx"
+      ],
+      "fix": "Make the document the scroll container (remove the wrapper Box, put scroll-snap on html/body if kept). Use <a href='#id'> for nav so hash + history work natively.",
+      "effort": "M",
+      "phase": 2,
+      "sameRootCauseAs": [
+        "B2",
+        "B3",
+        "B4"
+      ]
+    },
+    {
+      "id": "B2",
+      "category": "bug",
+      "severity": "medium",
+      "status": "done",
+      "title": "AppBar hide-on-scroll is dead code",
+      "evidence": "Layout.tsx reads window.scrollY which is always 0 because the document never scrolls. Also re-registers the scroll listener on every scroll (lastScrollY in deps).",
+      "files": [
+        "src/components/Layout.tsx"
+      ],
+      "fix": "Fixed automatically by B1; otherwise listen on the actual scroll container or delete the feature.",
+      "effort": "XS",
+      "phase": 2,
+      "resolution": "done: dead hide-on-scroll code removed"
+    },
+    {
+      "id": "B3",
+      "category": "bug",
+      "severity": "medium",
+      "status": "done",
+      "title": "Nav has no active state",
+      "evidence": "Layout.tsx calls useScrollSpy but never uses activeSection. Only the right-edge dots reflect it.",
+      "files": [
+        "src/components/Layout.tsx"
+      ],
+      "fix": "Highlight active nav item using activeSection.",
+      "effort": "XS",
+      "phase": 2,
+      "resolution": "done: active nav underline + aria-current"
+    },
+    {
+      "id": "B4",
+      "category": "bug",
+      "severity": "medium",
+      "status": "todo",
+      "title": "iOS Safari toolbar never collapses; outer 100vh box",
+      "evidence": "Nested scroll container + height:100vh (not dvh). On iOS the bottom strip sits under the toolbar.",
+      "files": [
+        "src/App.tsx"
+      ],
+      "fix": "Document scrolling (B1) + min-height: 100dvh where needed.",
+      "effort": "S",
+      "phase": 2
+    },
+    {
+      "id": "B5",
+      "category": "bug",
+      "severity": "medium",
+      "status": "done",
+      "title": "Sections hard-coded to height:100vh clip content on short viewports",
+      "evidence": "About/Experience/Projects use height {md:'100vh'}; Contact 90vh. At 768px tall or with browser zoom, content overflows and is cut.",
+      "files": [
+        "src/components/sections/*.tsx"
+      ],
+      "fix": "Use minHeight only; drop height.",
+      "effort": "XS",
+      "phase": 0,
+      "resolution": "done: hard height removed, minHeight kept"
+    },
+    {
+      "id": "B6",
+      "category": "bug",
+      "severity": "low",
+      "status": "done",
+      "title": "Personal Website project liveUrl never rendered and points to old vercel.app domain",
+      "evidence": "projects.ts liveUrl='https://portfolio-geneyu.vercel.app/'; ProjectsSection dialog only renders githubUrl/demoUrl/paperUrl.",
+      "files": [
+        "src/data/projects.ts",
+        "src/components/sections/ProjectsSection.tsx"
+      ],
+      "fix": "Covered by projectsPlan (links object rendered generically).",
+      "effort": "XS",
+      "phase": 1,
+      "resolution": "done: liveUrl fixed to www.geneyu.me and rendered as Visit site button"
+    },
+    {
+      "id": "F1",
+      "category": "fonts",
+      "severity": "high",
+      "status": "done",
+      "title": "Body font Inter and logo font Space Grotesk are declared but never loaded; Playfair Display loaded but unused",
+      "evidence": "index.html loads Space Mono, Poppins, Playfair Display. themes/index.ts fontFamily = Inter. Layout.tsx logo = Space Grotesk. document.fonts confirms Inter/Space Grotesk absent; Playfair 4 weights unloaded/unused.",
+      "files": [
+        "index.html",
+        "src/themes/index.ts",
+        "src/components/Layout.tsx",
+        "src/index.css"
+      ],
+      "fix": "Pick final families (see designDirection.typography). Self-host via @fontsource-variable/* or local woff2 with font-display: swap; <link rel=preload> the 2 critical files; remove Google Fonts <link> (render-blocking, est. 1.2s mobile).",
+      "effort": "S",
+      "phase": 0,
+      "resolution": "done: self-hosted Inter Variable / Poppins / Space Mono via @fontsource; Google Fonts link removed; Playfair dropped"
+    },
+    {
+      "id": "A1",
+      "category": "a11y",
+      "severity": "high",
+      "status": "done",
+      "title": "Heading hierarchy is wrong",
+      "evidence": "Section titles are <span>; only real h2 is the typewriter role; h5/h6 appear before any h2 (Lighthouse heading-order).",
+      "files": [
+        "src/components/SectionHeading.tsx",
+        "src/components/sections/HeroSection.tsx",
+        "src/components/sections/ProjectsSection.tsx",
+        "src/components/sections/AboutSection.tsx"
+      ],
+      "fix": "SectionHeading renders <h2>. Typewriter line becomes <p>. Card titles h3. Skill titles h3 or plain.",
+      "effort": "XS",
+      "phase": 0,
+      "resolution": "done: SectionHeading renders h2 with id; typewriter is <p>; card/skill titles h3"
+    },
+    {
+      "id": "A2",
+      "category": "a11y",
+      "severity": "high",
+      "status": "done",
+      "title": "Clickable divs not keyboard operable; icon links unnamed",
+      "evidence": "Project cards, skill flip cards, scroll dots, mobile social tab are div+onClick. Contact SocialButton <a> has no aria-label (Lighthouse link-name x3). No <nav> landmark.",
+      "files": [
+        "src/components/sections/ProjectsSection.tsx",
+        "src/components/sections/AboutSection.tsx",
+        "src/components/ScrollIndicator.tsx",
+        "src/components/SocialLinks.tsx",
+        "src/components/sections/ContactSection.tsx",
+        "src/components/Layout.tsx"
+      ],
+      "fix": "Use <button>/<a>; add aria-label; wrap nav in <nav aria-label='Primary'>.",
+      "effort": "S",
+      "phase": 0,
+      "resolution": "done: nav landmarks, aria-labels on icon links, scroll dots are buttons, project + skill cards keyboard operable"
+    },
+    {
+      "id": "A3",
+      "category": "a11y",
+      "severity": "high",
+      "status": "in-progress",
+      "title": "No prefers-reduced-motion handling anywhere",
+      "evidence": "Particles, scramble, typewriter, rotating ring, glow pulse, globe autoRotate, framer whileInView all run unconditionally.",
+      "files": [
+        "src/index.css",
+        "src/components/ParticleNetwork.tsx",
+        "src/components/sections/HeroSection.tsx",
+        "src/components/sections/TravelSection.tsx"
+      ],
+      "fix": "useReducedMotion() from framer-motion + CSS media query; disable canvas loops and autoRotate when set.",
+      "effort": "S",
+      "phase": 2,
+      "resolution": "in-progress: hero, typewriter, particles, CSS animations respect reduced motion; globe autoRotate + framer whileInView still TODO"
+    },
+    {
+      "id": "A4",
+      "category": "a11y",
+      "severity": "medium",
+      "status": "done",
+      "title": "Custom cursor hides native cursor globally",
+      "evidence": "index.css: @media (hover:hover) { *, *::before, *::after { cursor:none !important } } applies before React mounts, inside inputs, and custom cursor has no hover/link state.",
+      "files": [
+        "src/index.css",
+        "src/components/CustomCursor.tsx"
+      ],
+      "fix": "Remove custom cursor (recommended) or keep native cursor and render the follower as a decoration only.",
+      "effort": "XS",
+      "phase": 0,
+      "resolution": "done: CustomCursor removed, global cursor:none removed"
+    },
+    {
+      "id": "P1",
+      "category": "performance",
+      "severity": "high",
+      "status": "done",
+      "title": "LCP image not discoverable / not prioritised",
+      "evidence": "Profile photo only exists after JS render; no <link rel=preload>, no fetchpriority=high, no width/height.",
+      "files": [
+        "index.html",
+        "src/components/sections/HeroSection.tsx"
+      ],
+      "fix": "<link rel='preload' as='image' href='/assets/images/profile/myPhoto.webp' fetchpriority='high'> in index.html; add width/height + fetchPriority='high' on the img. Long-term: prerender HTML (Astro or vite-plugin-prerender).",
+      "effort": "XS",
+      "phase": 0,
+      "resolution": "done: preload + fetchpriority=high + width/height on hero image"
+    },
+    {
+      "id": "P2",
+      "category": "performance",
+      "severity": "medium",
+      "status": "done",
+      "title": "Project images eager-loaded without dimensions",
+      "files": [
+        "src/components/sections/ProjectsSection.tsx"
+      ],
+      "fix": "loading='lazy' decoding='async' width/height on CardMedia img; consider 2 sizes via srcset from the image pipeline.",
+      "effort": "XS",
+      "phase": 0,
+      "resolution": "done: loading=lazy, decoding=async, width on card images"
+    },
+    {
+      "id": "P3",
+      "category": "performance",
+      "severity": "medium",
+      "status": "done",
+      "title": "earth-night.jpg 699 KB bypasses image pipeline",
+      "files": [
+        "public/globe/earth-night.jpg",
+        "scripts/optimize-images.mjs"
+      ],
+      "fix": "Convert to WebP ~2048px q75 (expect ~150-200 KB); or move to assets-src/globe and extend the script preset.",
+      "effort": "XS",
+      "phase": 0,
+      "resolution": "done: earth-night.webp 70 KB (was 699 KB jpg)"
+    },
+    {
+      "id": "P4",
+      "category": "performance",
+      "severity": "medium",
+      "status": "todo",
+      "title": "No cache or security headers in vercel.json",
+      "evidence": "public/ assets served with max-age=0. Only HSTS present.",
+      "files": [
+        "vercel.json"
+      ],
+      "fix": "headers: /assets/images/* , /globe/* -> Cache-Control: public, max-age=31536000, immutable (rename on change). Add X-Content-Type-Options, Referrer-Policy, Permissions-Policy, and a CSP once Google Fonts is removed.",
+      "effort": "S",
+      "phase": 2
+    },
+    {
+      "id": "P5",
+      "category": "performance",
+      "severity": "medium",
+      "status": "todo",
+      "title": "200 KB gzip runtime for a static page",
+      "evidence": "MUI + Emotion + Framer Motion + react-globe.gl. Lighthouse: 40% of index bundle unused.",
+      "fix": "Option A (incremental): keep MUI, tree-shake icons via direct imports (already), drop react-icons, lazy-load Dialog/Drawer. Option B (rewrite, recommended for top-tier): Astro + React islands (globe island), Tailwind or vanilla CSS tokens, Framer Motion only inside islands. Prerendered HTML fixes P1 and SEO h1 at once.",
+      "effort": "L",
+      "phase": 3
+    },
+    {
+      "id": "S1",
+      "category": "seo",
+      "severity": "medium",
+      "status": "done",
+      "title": "Title tag, canonical, og:url host, JSON-LD, sitemap, theme-color",
+      "evidence": "<title>Gene Yu</title>; no canonical; og:url=https://geneyu.me but canonical host is www; no JSON-LD Person; no sitemap.xml; theme-color meta lost in Vite migration.",
+      "files": [
+        "index.html",
+        "public/"
+      ],
+      "fix": "title 'Gene Yu - Software Engineer, London'; canonical https://www.geneyu.me/ (or flip redirect to apex and keep geneyu.me everywhere); JSON-LD Person with sameAs (GitHub, LinkedIn); static sitemap.xml; theme-color #0a192f (or new token).",
+      "effort": "S",
+      "phase": 0,
+      "resolution": "done: title, description, canonical, og:url www, JSON-LD Person, sitemap.xml, robots Sitemap, theme-color, manifest, apple-touch-icon"
+    },
+    {
+      "id": "H1",
+      "category": "hygiene",
+      "severity": "medium",
+      "status": "done",
+      "title": "CRA leftovers and dead files still shipped",
+      "evidence": "public/manifest.json says 'Create React App Sample'; public/index.html is the old CRA template; src/App.css, src/components/Logo.tsx, src/hooks/useScrollDirection.ts, src/data/social.ts, src/data/socialLinks.ts unused; themes elegantDarkTheme/natureTheme unused; react-icons dependency unused; public/logo192.png, logo512.png unused.",
+      "fix": "Delete all; write a real manifest (name 'Gene Yu', theme_color, icons from favicon.svg).",
+      "effort": "XS",
+      "phase": 0,
+      "resolution": "done: CRA leftovers, dead components/hooks/data, react-icons removed"
+    },
+    {
+      "id": "H2",
+      "category": "hygiene",
+      "severity": "low",
+      "status": "todo",
+      "title": "No lint / format / CI / tests",
+      "fix": "eslint (typescript-eslint + react-hooks + jsx-a11y), prettier, GitHub Actions: typecheck + build + Lighthouse CI budget (perf >= 90 mobile, a11y 100).",
+      "effort": "S",
+      "phase": 2
+    },
+    {
+      "id": "H3",
+      "category": "hygiene",
+      "severity": "low",
+      "status": "in-progress",
+      "title": "@types/* in dependencies; legacy MUI Grid item API; @mui 6 with React 19 fine",
+      "files": [
+        "package.json"
+      ],
+      "fix": "Move @types to devDependencies. Migrate Grid -> Grid2 or drop MUI (P5).",
+      "effort": "XS",
+      "phase": 2,
+      "resolution": "in-progress: @types moved to devDependencies; MUI Grid legacy API still used"
+    },
+    {
+      "id": "C1",
+      "category": "content",
+      "severity": "medium",
+      "status": "done",
+      "title": "Site content out of date vs CV (2026-09-01)",
+      "fix": "See cvDelta.",
+      "effort": "S",
+      "phase": 1,
+      "resolution": "done: experience/skills/projects/about/hero rewritten from CV_ChunYu.pdf; Syphonix; VCDF + PAKDD 2026"
+    }
+  ],
+  "designDirection": {
+    "goal": "Remove template recognisability while keeping the dark, single-page, section-based layout Gene likes; layer an Apple-style liquid-glass material on surfaces.",
+    "whatToChange": {
+      "palette": "Replace the four Chiang tokens. Direction: near-black with a cool tint for ground, layered glass surfaces instead of flat #112240 cards, one accent that is not mint-green.",
+      "opener": "Drop 'Hi, my name is'. Lead with the name or with the one-line positioning statement.",
+      "sectionHeadings": "Drop '01.' numbering + trailing rule. Use small uppercase eyebrow label + large heading, or heading only.",
+      "socialStrip": "Remove the bottom-left horizontal-line social strip. Put socials in header right or footer.",
+      "keep": "Space Mono as the mono accent is fine but pair with a distinctive display face; dark mode; section order; globe."
+    },
+    "proposedTokens": {
+      "note": "Starting point, tune visually. Defined as CSS custom properties; MUI theme reads from them until MUI is dropped.",
+      "--bg-0": "#07090f",
+      "--bg-1": "#0b0f18",
+      "--glass-fill": "rgba(255,255,255,0.06)",
+      "--glass-fill-hover": "rgba(255,255,255,0.09)",
+      "--glass-stroke": "rgba(255,255,255,0.14)",
+      "--glass-highlight": "linear-gradient(135deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.05) 40%, rgba(255,255,255,0) 60%)",
+      "--text-1": "#f2f4f8",
+      "--text-2": "#a3acbf",
+      "--text-3": "#6b7386",
+      "--accent": "#7c9cff",
+      "--accent-2": "#ffb86b",
+      "--accent-alt-options": [
+        "#7c9cff cobalt-periwinkle",
+        "#f0c36b warm amber",
+        "#ff7a59 coral",
+        "#c8b6ff lavender"
+      ],
+      "--radius-card": "20px",
+      "--radius-pill": "999px"
+    },
+    "liquidGlassRecipe": {
+      "surface": ".glass { background: var(--glass-fill); backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%); border: 1px solid var(--glass-stroke); border-radius: var(--radius-card); box-shadow: 0 1px 0 rgba(255,255,255,0.12) inset, 0 20px 60px rgba(0,0,0,0.45); position: relative; overflow: hidden; }",
+      "specularEdge": ".glass::before { content:''; position:absolute; inset:0; border-radius:inherit; padding:1px; background: var(--glass-highlight); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events:none; }",
+      "innerRefraction": ".glass::after { content:''; position:absolute; inset:-40%; background: radial-gradient(closest-side, rgba(255,255,255,0.10), transparent 70%); transform: translate(var(--mx,0), var(--my,0)); pointer-events:none; transition: transform .6s ease; } /* set --mx/--my from pointer for a moving light */",
+      "backgroundNeedsColor": "Glass only reads as glass if there is something colourful/blurred behind it. Replace the flat navy with 2-3 large, slow-moving blurred colour blobs (radial-gradients on a fixed canvas or CSS @keyframes) in accent hues at low alpha. This also replaces the particle network.",
+      "noise": "Optional 2-3% opacity SVG feTurbulence noise overlay on the body to kill banding.",
+      "restraint": "Use glass for: header bar, cards, dialog, country card. Do NOT glass the whole section background. Max 2 glass layers stacked.",
+      "fallback": "@supports not (backdrop-filter: blur(1px)) { .glass { background: rgba(20,24,34,0.92); } }",
+      "reducedMotion": "Freeze blob movement and light-follow under prefers-reduced-motion."
+    },
+    "typography": {
+      "display": "One of: 'Instrument Serif' (editorial contrast, very un-template), 'Geist' (clean, Vercel-adjacent), 'Bricolage Grotesque' (character). Recommend Instrument Serif for headings + Geist for body: memorable pairing.",
+      "body": "Geist or Inter (self-hosted, variable)",
+      "mono": "Keep Space Mono, or Geist Mono for consistency",
+      "load": "Self-host woff2 via @fontsource-variable, preload display + body, font-display: swap, remove Google Fonts link"
+    },
+    "hero": {
+      "recommendedCopy": "Name as h1. Below: 'Software engineer on trading systems in London. Imperial MSc (Distinction). Two peer-reviewed papers. 43 countries.' Then two buttons: 'See projects' + 'Resume'.",
+      "keepTypewriter": "Optional; if kept, phrases must be facts not jokes-only: 'Trading systems engineer', 'Causal discovery researcher', 'Mostly AI, slightly human'."
+    }
+  },
+  "projectsPlan": {
+    "problem": "projects.ts has an ad-hoc shape (githubUrl/demoUrl/paperUrl/liveUrl), liveUrl is not rendered, images are hand-made, and new projects (Cosmogram, mvpui.com, SignalLab, MoniTrade) have nowhere to go.",
+    "dataModel": {
+      "file": "src/data/projects.ts",
+      "shape": {
+        "slug": "string, unique, used for image filename + anchor (#projects/cosmogram) + future case-study route",
+        "title": "string",
+        "tagline": "one line, outcome-first, <= 90 chars",
+        "description": "2-4 sentences for the dialog",
+        "highlights": "string[] 2-4 bullets: metrics, publications, users, scale",
+        "tech": "string[]",
+        "year": "number or 'YYYY - present'",
+        "status": "'live' | 'wip' | 'archived' | 'research'",
+        "featured": "boolean; featured first",
+        "image": "derived: /assets/images/projects/<slug>.webp",
+        "links": {
+          "live": "url?",
+          "repo": "url?",
+          "npm": "url?",
+          "paper": "url?",
+          "demo": "url?"
+        },
+        "roles": "string[] optional: 'solo', 'team of 4', 'lead'"
+      },
+      "renderLinksGenerically": "Dialog + card footer iterate over links with an icon map { live: OpenInNew, repo: GitHub, npm: Package, paper: Article, demo: YouTube }; nothing hard-coded per key."
+    },
+    "cardInteraction": {
+      "clickCard": "opens dialog (current behaviour)",
+      "liveBadge": "if links.live: show a small 'Live ↗' pill on the image corner; clicking the pill opens the site directly (stopPropagation)",
+      "dialogPrimaryCTA": "if links.live exists it is the primary button ('Visit site'); repo/paper secondary",
+      "statusChip": "wip / research shown as chip on card so unfinished work is honest"
+    },
+    "screenshotPipeline": {
+      "script": "scripts/capture-screenshots.mjs",
+      "how": "puppeteer-core with local Chrome (proven in this audit). For each project with links.live and no assets-src/projects/<slug>.png: goto url, viewport 1440x900 deviceScaleFactor 2, wait networkidle0 + 1.5s, screenshot -> assets-src/projects/<slug>.png. Existing optimize-images.mjs then produces the webp. Add --force to recapture.",
+      "framing": "Optionally composite into a browser-chrome frame (rounded top bar with 3 dots) via sharp so all cards look uniform; or crop to 16:10 hero region.",
+      "nonWebProjects": "Cosmogram: run its UI package locally (packages/ui) and screenshot, or render a terminal session mockup. SignalLab/MoniTrade: run locally with mock data (both support USE_MOCK_DATA) and screenshot the dashboard.",
+      "npmScript": "\"shots\": \"node scripts/capture-screenshots.mjs\", run before optimize:images"
+    },
+    "layout": "Keep horizontal snap row on mobile. On desktop, switch to a 2-column grid with the first featured project spanning full width (large screenshot) so the section has a hierarchy. Cap visible projects at 6; 'All projects' link to a dedicated /projects page later.",
+    "inventory": [
+      {
+        "slug": "cosmogram",
+        "title": "Cosmogram",
+        "status": "live",
+        "featured": true,
+        "links": {
+          "repo": "https://github.com/gene0524/Cosmogram",
+          "npm": "https://www.npmjs.com/package/cosmogram"
+        },
+        "notes": "npm cosmogram v0.3.1, Apache-2.0, CI, monorepo (core/cli/ui/adapter-claude-code). Lockfile + runtime trace + blame for Claude Code skills/agents. Strongest 2026 project; screenshot the ui package (sphere visualisation).",
+        "tech": [
+          "TypeScript",
+          "Node",
+          "pnpm monorepo",
+          "Merkle hashing",
+          "Claude Code"
+        ]
+      },
+      {
+        "slug": "mvpui",
+        "title": "mvpui.com",
+        "status": "live",
+        "links": {
+          "live": "https://mvpui.com",
+          "repo": "https://github.com/gene0524/mvpui"
+        },
+        "notes": "Next.js 16 / React 19 / Tailwind 4 static landing page; pre-launch (no contact, no prices). Fine to show as 'design + build' work.",
+        "tech": [
+          "Next.js 16",
+          "React 19",
+          "Tailwind 4",
+          "Vercel"
+        ]
+      },
+      {
+        "slug": "signallab",
+        "title": "SignalLab",
+        "status": "wip",
+        "links": {},
+        "notes": "Taiwan stock EOD scanner: TWSE/TPEx pipeline, MA strategies, Lightweight Charts dashboard, Prisma/SQLite, node-cron. Not a git repo locally; not deployed. Screenshot locally with mock provider.",
+        "tech": [
+          "React",
+          "TypeScript",
+          "Express",
+          "Prisma",
+          "Lightweight Charts",
+          "node-cron"
+        ]
+      },
+      {
+        "slug": "monitrade",
+        "title": "MoniTrade",
+        "status": "wip",
+        "links": {},
+        "notes": "FX & metals signal MVP; RSI/MA/MACD in plain language; Claude intent->strategy; backtest engine. Not a git repo locally. Mock mode available for screenshots.",
+        "tech": [
+          "Node",
+          "Express",
+          "React",
+          "Tailwind",
+          "Claude API",
+          "Twelve Data"
+        ]
+      },
+      {
+        "slug": "vcdf",
+        "title": "VCDF: Validated Consensus-Driven Causal Discovery",
+        "status": "research",
+        "featured": true,
+        "links": {
+          "paper": "https://arxiv.org/abs/2410.19412",
+          "repo": "https://github.com/gene0524/Robust-Consensus-Driven-Causal-Discovery"
+        },
+        "notes": "RENAME existing 'Robust Time Series Causal Discovery' entry. Now peer-reviewed: PAKDD 2026. Highlight: +0.08-0.12 F1 for VAR-LiNGAM on fMRI + IT-monitoring benchmarks.",
+        "tech": [
+          "Python",
+          "Causal discovery",
+          "Time series",
+          "fMRI"
+        ]
+      },
+      {
+        "slug": "motion-analysis",
+        "title": "IMU Football Kick Motion Analysis",
+        "status": "research",
+        "links": {
+          "paper": "https://www.mdpi.com/1424-8220/22/16/6244"
+        },
+        "notes": "Keep. Sensors 2022, 22, 6244."
+      },
+      {
+        "slug": "rom-macro",
+        "title": "512-bit ROM Macro (VLSI)",
+        "status": "archived",
+        "links": {},
+        "notes": "New from CV. Transistor + layout level, PPA optimisation, SPICE-verified. Optional; only if hardware background is part of the story."
+      },
+      {
+        "slug": "foodhub",
+        "status": "archived",
+        "notes": "Coursework; consider demoting or removing once 2026 projects are in."
+      },
+      {
+        "slug": "little-lemon",
+        "status": "archived",
+        "notes": "Meta certificate capstone; demote or remove."
+      },
+      {
+        "slug": "portfolio-website",
+        "status": "live",
+        "links": {
+          "live": "https://www.geneyu.me",
+          "repo": "https://github.com/gene0524/personal-website"
+        },
+        "notes": "Fix liveUrl (currently old vercel.app)."
+      }
+    ],
+    "status": "reworked 2026-09-15 (v2: index-style Work section)",
+    "implemented": {
+      "dataModel": "src/data/projects.ts — Project interface (slug, title, tagline, description, highlights, tech, year, status, featured, image{width,height,position}|null, links{live,repo,npm,paper,demo}); exported list is sorted featured > status > year",
+      "rendering": "src/components/sections/ProjectsSection.tsx — desktop 3-col dense grid (featured span 2), mobile horizontal snap row; status chip; Live pill on image opens site directly; generated cover when image null; dialog with highlights + generic link buttons (first link is primary)",
+      "screenshots": "scripts/capture-screenshots.mjs (npm run shots) — puppeteer-core + local Chrome, 1440x900@2x, captures links.live projects missing assets-src/projects/<slug>.png; --force to recapture; --slug=x --url=y for local apps",
+      "images": "assets-src/projects renamed to slugs (vcdf, foodhub, personal-website); cosmogram.png copied from Cosmogram/docs/images/ui-graph.png; mvpui.png captured from mvpui.com; personal-website.png recaptured from local dev server (recapture after the redesign ships)",
+      "inventory": "12 projects: cosmogram (featured), vcdf (featured), britween, mvpui, aoquant, agro-cert (client, no image yet), personal-website, motion-analysis, signallab (wip), monitrade (wip), foodhub (archived), little-lemon (archived)",
+      "ordering": "optional `order` number pins position by hand; otherwise featured > status (live, research, wip, archived) > newest year"
+    },
+    "todo": [
+      "Britween: replace site screenshot with an event photo (people, not UI)",
+      "agro-cert: anonymised screenshot from local dev with a test account, after client OK",
+      "Case-study pages for featured work (Phase 3)",
+      "srcset for tile images"
+    ],
+    "newProjects2026_09_15": {
+      "aoquant": {
+        "repo": "~/Desktop/Projects/aoquant",
+        "live": "https://aoquant.vercel.app (aoquant.mvpui.com DNS not resolving yet; card links to mvpui domain, screenshot taken from vercel.app)",
+        "notes": "Static showcase snapshot of the read-only cockpit; regenerate with `uv run python scripts/cockpit.py --snapshot --out public/index.html`"
+      },
+      "britween": {
+        "repo": "~/Desktop/Projects/britween (git: gene0524/britween.com)",
+        "live": "https://britween.com",
+        "notes": "Non-profit co-founded by Gene; screenshot needs --wait=7000 because of hero typewriter"
+      },
+      "agro-cert": {
+        "repo": "~/Desktop/特色農業旅遊認證/farm-certification-system/agro-tour-cert-website",
+        "live": "client system, not linked",
+        "notes": "Client project. No screenshot yet. Options: (1) anonymised screenshot from local dev with a test account, (2) separate mock-data showcase like aoquant, (3) text-only card. Needs client OK before naming them or showing real UI. See chat 2026-09-15."
+      }
+    },
+    "v2": {
+      "framing": "Every entry answers: what is it, who for, what did I do, what came of it. Fields: org, kind[] (kind[0] is the primary category used by the filter; PRIMARY_KINDS list), tagline, role, facts[], about, highlights[], tech (detail only), links.",
+      "presentation": "Section renamed Work. Grid view: 2-col tiles, mono meta line (org · year) above a 16:10 image, title + visit link, tagline, role, hairline + facts in mono green. List view: index table (year · project · for · kind · visit). Filter by primary kind. Dialog: eyebrow, title, tagline, image, What it is / What I did (highlights), Outcome facts, Built with, links. No coloured chips, no card borders.",
+      "reference": "phantom.land work wall: editorial mono metadata around media, grid/list toggle, filter. Not copied; adapted to a single-page site.",
+      "britween": "Reframed as the community (13 events since Aug 2025, 445 attendees, event types) with Gene as co-founder; site is one bullet. Screenshot pipeline now dismisses cookie banners and supports --wait for intro animations. A real event photo would beat the site screenshot: drop it at assets-src/projects/britween.png and run optimize:images --force.",
+      "aoquant": "aoquant.mvpui.com resolves via public DNS (Vercel 76.76.21.21); local resolver lagged. Screenshot captured from the mvpui domain."
+    }
+  },
+  "cvDelta": {
+    "source": "assets-src/resume/CV_ChunYu.pdf (added 2026-09-15, software-engineering version; supersedes the equity-research-angled ~/Desktop/_Job Application/CV/CV_GeneYu.pdf for site purposes). Site resume.pdf is from 2026-05-01 -> replace public/assets/files/resume.pdf with this file.",
+    "updates": [
+      {
+        "field": "experience[0].title",
+        "site": "Software Engineer — Platform & DevOps",
+        "cv": "Software Engineer – Trading Systems"
+      },
+      {
+        "field": "experience[0].company",
+        "site": "xSyphon · London",
+        "cv": "Syphonix, London",
+        "decision": "Syphonix"
+      },
+      {
+        "field": "experience[0].description",
+        "cv": "Live trading environment (~$1B daily flow); FIX log analysis tooling for incident diagnosis; AI-powered internal tools with trading ops; backend components for low-latency services; CI/CD, multi-env releases, infra automation."
+      },
+      {
+        "field": "projects[causal-discovery]",
+        "site": "RCV framework, arXiv only",
+        "cv": "VCDF, peer-reviewed at PAKDD 2026, +0.08-0.12 F1 on VAR-LiNGAM"
+      },
+      {
+        "field": "skills",
+        "site": "Frontend-heavy list",
+        "cv": "Python, C++, Java, SQL, R, MATLAB, Docker, AWS, Azure, CI/CD; Mandarin native, English fluent"
+      },
+      {
+        "field": "contact.email",
+        "site": "gene-yu-tw@gmail.com",
+        "cv": "gene.yu.tw@gmail.com"
+      },
+      {
+        "field": "experience[0].description",
+        "cv": "Three bullets: (1) trading-support + observability tooling for ~$1B/day platform, automated FIX log analysis, backend components for low-latency services; (2) DevOps + cloud ops: CI/CD, multi-env releases, infra automation, proactive monitoring; (3) AI-powered internal tools with trading ops, AI-native engineering transition.",
+        "replaces": "earlier vague description"
+      },
+      {
+        "field": "skills",
+        "cv": "Programming & Tools: Python, C++, Java, React, SQL, Git, Verilog, MATLAB, AI-Assisted Dev (Claude). Cloud & DevOps: AWS (EC2, S3, Lambda), Azure, CI/CD, Docker. Certificates: AWS DevOps Specialization, Meta Front-End Developer.",
+        "siteAction": "Rebuild skills.ts from this; drop the flip cards (D3)."
+      },
+      {
+        "field": "projects[foodhub]",
+        "cv": "Kept on CV (Feb-Mar 2023, microservices on Azure + Supabase, CI/CD, Food Finder feature).",
+        "siteAction": "Keep, but rank below Cosmogram / VCDF / mvpui."
+      },
+      {
+        "field": "experience[3] Tel Aviv exchange",
+        "cv": "Listed under Extracurricular, not Experience.",
+        "siteAction": "Optional: move out of the Experience timeline or keep as a lighter entry."
+      }
+    ],
+    "positioningTension": {
+      "resolved": true,
+      "decision": "Gene supplied the software-engineering CV for the site. Site audience = software / AI / trading-systems engineering. Do not add CFA or equity-research framing to the site copy.",
+      "note": "CFA Level I candidacy still appears in the CV education block; optional mention only."
+    }
+  },
+  "roadmap": [
+    {
+      "phase": 0,
+      "name": "Trust fixes",
+      "effort": "~1 day",
+      "items": [
+        "T1",
+        "T2",
+        "T3",
+        "F1",
+        "A1",
+        "A2",
+        "A4",
+        "B5",
+        "P1",
+        "P2",
+        "P3",
+        "S1",
+        "H1"
+      ]
+    },
+    {
+      "phase": 1,
+      "name": "Content + de-template",
+      "effort": "~2-3 days",
+      "items": [
+        "D1",
+        "D2",
+        "D3",
+        "C1",
+        "T4",
+        "B6",
+        "projectsPlan (data model, screenshot script, card links)"
+      ]
+    },
+    {
+      "phase": 2,
+      "name": "Architecture fixes",
+      "effort": "~2 days",
+      "items": [
+        "B1",
+        "B2",
+        "B3",
+        "B4",
+        "A3",
+        "P4",
+        "H2",
+        "H3"
+      ]
+    },
+    {
+      "phase": 3,
+      "name": "Top-tier polish",
+      "effort": "~1 week",
+      "items": [
+        "D4",
+        "P5",
+        "liquid glass material",
+        "case-study pages",
+        "Lighthouse CI budget"
+      ]
+    }
+  ],
+  "openQuestions": [
+    "Canonical email: gene.yu.tw@gmail.com?",
+    "Accent colour preference for the new palette (see --accent-alt-options)?",
+    "Keep or drop MUI (incremental vs Astro rewrite)?"
+  ],
+  "decisions": {
+    "companyName": "Syphonix (confirmed 2026-09-15; site currently says xSyphon in src/data/experience.ts)",
+    "phoneOnSite": false,
+    "siteAudience": "software / AI / trading-systems engineering",
+    "resumeSource": "assets-src/resume/CV_ChunYu.pdf"
+  }
+}

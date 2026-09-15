@@ -1,0 +1,253 @@
+{
+  "meta": {
+    "topic": "ThreeUI (MengTo/threeui) research for geneyu.me: (1) feasibility + plan for a custom Three.js hero scene inspired by 'Sylva', (2) options for a more distinctive projects/works showcase than the current grid+modal",
+    "created": "2026-09-16",
+    "localPath": "~/Desktop/Projects/geneyu/docs/hero-scene-plan-2026-09-16.json",
+    "relatedDocs": ["site-audit-2026-09-15.json"],
+    "purpose": "Durable, updatable record of all ThreeUI research (hero scene + projects showcase), the options considered, and phased plans, so work can resume in a new session without re-deriving anything.",
+    "statusLegend": "todo | in-progress | done | wontfix | blocked",
+    "lastUpdated": "2026-09-16 - added projectsShowcaseOptions section; no implementation started on either topic"
+  },
+  "trigger": {
+    "what": "Gene saw threeui.com's 'Sylva' hero component (paywalled 'Get Pro' catalog entry) - a living-world Three.js forest scene with local Lexend type, card imagery, and two native liquid-metal controls - and asked whether something similar could be built for geneyu.me's hero.",
+    "sourceRepo": "https://github.com/MengTo/threeui",
+    "sylvaPageUrl": "not captured - Gene pasted the catalog card text, no URL was given; do not guess one"
+  },
+  "research": {
+    "repo": {
+      "name": "MengTo/threeui",
+      "license": "MIT for app code, Community component code, and ThreeUI-authored Community imagery. Bundled fonts are SIL OFL 1.1. Bundled three.js runtime files are MIT. Remote catalog thumbnails/previews from threeui.com are NOT redistributable.",
+      "stack": "React 19 + TypeScript + Vite 7, npm package @designcodeio/threeui, peer deps react >=18 <20 / three >=0.149 <1",
+      "structure": "Pro and Beta components are stripped from this public repo; only Community-tier components ship with source. 50 Community parent components, 141 free variants.",
+      "stars": 5813,
+      "checkedAt": "2026-09-15"
+    },
+    "sylvaAnatomy": {
+      "proLayer": {
+        "status": "locked - source NOT available in the public repo",
+        "contains": "full hero page layout, Lexend type pairing, card imagery, page chrome, two 'native' liquid-metal controls integrated into that specific layout, plus 3 derived variants (re-dressed scene + retoned chrome)"
+      },
+      "communityLayer": {
+        "status": "public, MIT, fully read",
+        "component": "src/shaders/sylva-living-world/SylvaLivingWorldScene.tsx",
+        "sceneSource": "src/shaders/sylva-living-world/sources/inner-green-3d.html",
+        "sceneSourceSize": "197914 bytes, 4304 lines, single self-contained file (HTML+CSS+JS+bundled three.js r128 runtime as an inlined string)",
+        "mountingPattern": [
+          "Scene is a full standalone HTML document loaded into a sandboxed iframe via srcDoc (sandbox=\"allow-scripts\"), not mounted directly into the host React tree",
+          "IntersectionObserver on the host div pauses mounting when off-screen",
+          "document.visibilitychange listener pauses when the tab is hidden",
+          "prefers-reduced-motion media query swaps in a loop that skips requestAnimationFrame",
+          "three.js runtime is inlined as a JS string and injected via a <script> tag inside the iframe doc - it never touches the host page's module graph or bundle"
+        ],
+        "sceneContents": [
+          "Procedural tree trunk built from CatmullRomCurve3 skeleton + custom bark ShaderMaterial",
+          "InstancedBufferGeometry grass/fur and fern instances, each with an independent per-instance quaternion",
+          "Flower billboards textured via a canvas-generated CanvasTexture (drawn at runtime, not an image asset)",
+          "Pollen/dust particle system (THREE.Points + custom shader), plus a separate spray/burst particle system apparently tied to interaction",
+          "Three-light rig (key/fill/ambient) with hand-tuned colors, ACESFilmicToneMapping, sRGB output encoding",
+          "A separate liquid-metal button shader (uP[21] tunables, ripple/rim/pointer-well uniforms) mounted via a small IIFE, same raw-WebGL technique discussed earlier for the standalone liquid-metal-button component"
+        ],
+        "assessment": "Hand-authored, production-polished, effectively a bespoke small 3D-graphics project (hundreds of hours of work), not a drop-in effect. Densely commented but variable names are heavily abbreviated (uRip, uPtrK, uP[21]) - readable as reference, expensive to maintain if adopted wholesale."
+      }
+    },
+    "candidateCommunityComponents": [
+      {
+        "name": "constellation-field",
+        "path": "src/shaders/constellation-field/ConstellationField.tsx",
+        "sizeBytes": 1229,
+        "themeFit": "high - node/line network reads as data/trading-systems, not nature",
+        "readStatus": "not yet read in full"
+      },
+      {
+        "name": "orbital-sphere",
+        "path": "src/shaders/orbital-sphere/",
+        "sizeBytes": 7473,
+        "themeFit": "medium-high - abstract orbital motion, brand-neutral",
+        "readStatus": "not yet read in full"
+      },
+      {
+        "name": "energy-orb",
+        "path": "src/shaders/energy-orb/",
+        "sizeBytes": 14502,
+        "themeFit": "medium",
+        "readStatus": "not yet read in full"
+      },
+      {
+        "name": "globe",
+        "path": "src/shaders/globe/GlobeCollection.tsx",
+        "sizeBytes": 595,
+        "themeFit": "high on concept (matches audit's 'keep the globe' note, and the '43 countries' story) but geneyu.me already ships react-globe.gl (three.js) for its existing globe section per site-audit-2026-09-15.json meta.stack - need to decide replace-vs-keep, not just bolt on a second globe implementation",
+        "readStatus": "not yet read in full"
+      },
+      {
+        "name": "brand-orbs",
+        "path": "src/shaders/brand-orbs/",
+        "sizeBytes": 7932,
+        "themeFit": "low-medium",
+        "readStatus": "not read"
+      },
+      {
+        "name": "portal-field",
+        "path": "src/shaders/portal-field/",
+        "sizeBytes": 2929,
+        "themeFit": "low-medium",
+        "readStatus": "not read"
+      },
+      {
+        "name": "liquid-form",
+        "path": "src/shaders/liquid-form/",
+        "note": "Discussed before Sylva came up. Raw WebGL fragment shader, no three.js dependency at all. Directly matches site-audit-2026-09-15.json designDirection.liquidGlassRecipe.backgroundNeedsColor ('2-3 large slow-moving blurred colour blobs behind glass surfaces'). Cheapest, lowest-risk win, independent of whatever hero-scene decision gets made.",
+        "themeFit": "high, and orthogonal to the Sylva question"
+      },
+      {
+        "name": "liquid-metal-button",
+        "path": "src/shaders/liquid-metal-button/",
+        "note": "Raw WebGL/HTML button (no three.js). Same technique Sylva uses for its 'native liquid-metal controls'. Could be the CTA button treatment without needing the Pro hero layout.",
+        "themeFit": "high, and orthogonal to the Sylva question"
+      }
+    ]
+  },
+  "optionsConsidered": [
+    {
+      "id": "routeA",
+      "name": "Directly reuse/recolor the Sylva forest scene",
+      "verdict": "not recommended",
+      "reasons": [
+        "Thematic mismatch: ferns/flowers/butterfly reads as an eco/nature brand, not 'software engineer, trading systems, AI'",
+        "Recoloring only changes the palette, not the silhouette/motion language - still reads as a forest",
+        "4304-line file with heavily abbreviated tunables is expensive to safely modify past palette swaps",
+        "Much of the interaction code (burst/spray particles) looks tied to that page's specific button placements, dead weight if repurposed"
+      ]
+    },
+    {
+      "id": "routeB",
+      "name": "Borrow Sylva's technical pattern (iframe-sandboxed, self-contained three.js doc, IntersectionObserver + reduced-motion + tab-visibility handling) but design a bespoke, on-theme scene, assembled from the smaller Community components as reference/building blocks",
+      "verdict": "recommended, pending Gene's confirmation",
+      "reasons": [
+        "Candidate components are 1-15KB vs Sylva's 198KB - far less to read, adapt, and maintain",
+        "Can pick a concept that actually matches the portfolio narrative (data/constellation network, orbital motion, or a reworked globe)",
+        "Mounting pattern (iframe srcDoc isolation) keeps three.js out of the main Vite bundle regardless of which scene is chosen - same benefit without the content mismatch",
+        "liquid-form + liquid-metal-button already give a lower-risk parallel path to ship visible progress before the bigger scene decision is finalized"
+      ]
+    }
+  ],
+  "decision": {
+    "status": "proposed - awaiting Gene's confirmation before Phase 0 starts",
+    "chosen": "routeB",
+    "notChosen": "routeA",
+    "rationale": "Portfolio audience is decided as software/AI/trading-systems engineering (see site-audit-2026-09-15.json decisions), so an eco/nature scene works against the positioning regardless of execution quality."
+  },
+  "phases": [
+    {
+      "phase": 0,
+      "name": "Recon",
+      "effort": "~0.5 day",
+      "status": "todo",
+      "tasks": [
+        { "id": "R1", "desc": "Read full source of constellation-field, orbital-sphere, and globe components (currently only sizes/paths known)", "status": "todo" },
+        { "id": "R2", "desc": "Decide which scene concept (node/data network, orbital motion, or reworked globe) best fits the 'trading systems / causal discovery / 43 countries' narrative", "status": "todo" },
+        { "id": "R3", "desc": "Decide replace-vs-keep for the existing react-globe.gl globe section if the globe concept is chosen", "status": "todo", "blockedBy": "R2" }
+      ]
+    },
+    {
+      "phase": 1,
+      "name": "Technical spike",
+      "effort": "~1 day",
+      "status": "todo",
+      "tasks": [
+        { "id": "S1", "desc": "Extract Sylva's mounting pattern into a generic React wrapper: iframe srcDoc + IntersectionObserver pause + prefers-reduced-motion + tab-visibility pause", "status": "todo" },
+        { "id": "S2", "desc": "Prove it out with a minimal three.js demo (single rotating mesh) end to end", "status": "todo" },
+        { "id": "S3", "desc": "Confirm the iframe-isolated three.js runtime does not leak into the main Vite bundle (check build output)", "status": "todo" },
+        { "id": "S4", "desc": "Real-device mobile test: GPU/battery cost of a sandboxed WebGL iframe scene, and any interaction/layering conflict with the existing CSS backdrop-filter glass surfaces", "status": "todo" }
+      ]
+    },
+    {
+      "phase": 2,
+      "name": "Build the hero scene",
+      "effort": "~2-4 days, depends on which concept Phase 0 picks",
+      "status": "todo",
+      "tasks": [
+        { "id": "B1", "desc": "Adapt the chosen candidate component's geometry/shader to the site's tokens (--bg-0 #07090f, --accent #7c9cff) from site-audit-2026-09-15.json designDirection.proposedTokens", "status": "todo" },
+        { "id": "B2", "desc": "Strip interaction code not relevant to a passive hero background (e.g. Sylva's press-ripple/burst particles were built for its own button placements)", "status": "todo" },
+        { "id": "B3", "desc": "Layer existing CSS liquid-glass cards/header on top per designDirection.liquidGlassRecipe.restraint (max 2 glass layers stacked)", "status": "todo" },
+        { "id": "B4", "desc": "Ship as hero background; verify Lighthouse mobile score doesn't regress past the budget already planned in site-audit-2026-09-15.json roadmap phase 3", "status": "todo" }
+      ]
+    },
+    {
+      "phase": "parallel-quick-win",
+      "name": "Low-risk parallel track (independent of the Sylva decision)",
+      "effort": "~0.5-1 day combined",
+      "status": "todo",
+      "tasks": [
+        { "id": "Q1", "desc": "Port liquid-form's fragment shader (no three.js dependency) as the hero background blob layer called for in designDirection.liquidGlassRecipe.backgroundNeedsColor", "status": "todo" },
+        { "id": "Q2", "desc": "Evaluate liquid-metal-button for the primary CTA ('See projects' / 'Resume') as a lighter-weight echo of Sylva's liquid-metal controls, without needing the Pro hero layout", "status": "todo" }
+      ]
+    }
+  ],
+  "risks": [
+    "Mobile GPU/battery cost of any real-time WebGL hero scene - Sylva's own code already treats this as a real concern (reduced-motion + visibility pausing built in), budget real-device testing time, not just desktop",
+    "Two three.js-based systems on one page (existing react-globe.gl in the main bundle + a new iframe-isolated scene) - isolation via iframe should prevent version/bundle conflicts, but confirm in Phase 1 rather than assuming",
+    "Scope creep: Sylva's full effect (procedural geometry + custom shaders + particle systems) is a multi-day bespoke build even using smaller components as reference - keep Phase 2 scoped to one concept, resist stacking multiple candidate components together",
+    "Pro-tier visual language (Lexend pairing, specific card treatment) is not available and should not be reverse-engineered from the paywalled page - keep the site's own type/card decisions from site-audit-2026-09-15.json designDirection.typography"
+  ],
+  "openQuestions": [
+    "Which scene concept: node/data-network (constellation-field-inspired), orbital motion (orbital-sphere-inspired), or a reworked globe (replacing react-globe.gl)?",
+    "If globe is chosen, replace react-globe.gl entirely or keep it for a different section and add a separate hero effect?",
+    "Is a real-time WebGL hero scene worth the mobile performance risk at all, versus just shipping the liquid-form CSS/WebGL blob background (Q1) and calling the hero done?",
+    "Timeline: is this before or after the Phase 0-3 roadmap already committed in site-audit-2026-09-15.json?"
+  ],
+  "links": {
+    "threeuiRepo": "https://github.com/MengTo/threeui",
+    "sylvaSceneSource": "https://github.com/MengTo/threeui/blob/main/src/shaders/sylva-living-world/SylvaLivingWorldScene.tsx",
+    "sylvaSceneHtml": "https://github.com/MengTo/threeui/blob/main/src/shaders/sylva-living-world/sources/inner-green-3d.html"
+  },
+  "projectsShowcaseOptions": {
+    "trigger": "Gene flagged that the current per-project presentation in ProjectsSection.tsx feels generic and asked whether ThreeUI has a more suitable reference pattern.",
+    "currentImplementation": {
+      "file": "src/components/sections/ProjectsSection.tsx",
+      "dataFile": "src/data/projects.ts",
+      "pattern": "Filterable 2-column CSS-grid of tiles (16:10 screenshot, hover-scale image, title/tagline/role/facts) + grid/list view toggle, click opens a MUI Dialog with the full write-up and link buttons.",
+      "assessment": "Functionally solid and already data-driven (one catalogue array feeds tile, list row, and dialog), but the visual pattern itself - screenshot card grid opening a modal - is a very common SaaS/portfolio convention, which is what reads as generic rather than any execution flaw.",
+      "alreadyPlannedButNotShipped": "site-audit-2026-09-15.json projectsPlan.layout already calls for the first featured project to span full width on desktop for hierarchy; current grid is still a uniform repeat(2, 1fr) - this is a low-effort win independent of any ThreeUI decision."
+    },
+    "candidatesReviewed": [
+      {
+        "name": "bookshelf",
+        "path": "src/shaders/bookshelf/",
+        "files": "BookshelfScene.tsx (3.6KB wrapper) + bookshelfRenderer.js (863KB bespoke 3D engine)",
+        "concept": "A fully interactive 3D bookshelf: each item is a book with its own cover, clicking opens it into a paged detail view (browse UI, prev/next, inspect, open/close book, page-turn controls, a selection counter and palette label all wired up).",
+        "fitToAsk": "Conceptually the closest match to 'a better way to browse a list of discrete works' of everything in the library - books-as-projects, page-turning as the detail view.",
+        "effortAndRisk": "By far the heaviest option (863KB hand-built renderer, fully bespoke geometry/interaction for book objects specifically). Adapting it to arbitrary project screenshots means rebuilding the book-cover/page system, not swapping assets into an existing template. Also a tone risk: the portfolio's positioning is software/AI/trading-systems engineering credibility (per site-audit-2026-09-15.json decisions), and a literal 3D bookshelf skews toward a design-showpiece feel that could undercut that, the same mismatch flagged for Sylva's forest scene.",
+        "verdict": "Worth studying as inspiration for the DETAIL view only (e.g. a richer slide-over/page-like transition replacing the current MUI Dialog), not worth adopting as the whole browsing metaphor."
+      },
+      {
+        "name": "character-carousel",
+        "path": "src/shaders/character-carousel/",
+        "files": "CharacterCarousel.tsx (6.3KB) + two self-contained HTML sources (filmstrip, wave variants)",
+        "concept": "A horizontal carousel of item cards. 'Filmstrip' reads as a scroll/drag band of cards with parallax and a focused/scaled current item; 'wave' undulates the row. Mounted via sandboxed iframe with postMessage-driven speed/scale/pause controls, IntersectionObserver + tab-visibility pausing already built in - same lightweight pattern as liquid-form/liquid-metal-button (no three.js dependency confirmed).",
+        "fitToAsk": "Good reference for elevating the interaction language (focused item scales up, neighbors recede, smooth drag/scroll-snap) without changing what's fundamentally a card-based browse - closer to an incremental upgrade than a rebuild.",
+        "effortAndRisk": "Low-medium. The architecture (iframe isolation, visibility-based pausing, postMessage controls) is directly reusable even if built as a native DOM component instead of copying their HTML/CSS verbatim (project cards need real links/accessibility, which a sandboxed iframe complicates - would recommend reimplementing the interaction natively in React rather than reusing their iframe approach for this one).",
+        "verdict": "Best proportional upgrade candidate: keep the current data model and dialog, replace the static grid's motion language with a filmstrip-style focused-card interaction on desktop, keep simple stacked cards or horizontal snap on mobile (audit's projectsPlan.layout already asks for horizontal snap on mobile)."
+      },
+      {
+        "name": "gallery",
+        "path": "src/shaders/gallery/Gallery.tsx",
+        "files": "Single ~200-line file, real three.js (not iframe-isolated)",
+        "concept": "A rotating cylindrical wall of images (CoverFlow-like), texture-mapped project screenshots on curved panels, auto-rotating with a slow vertical bob.",
+        "fitToAsk": "Visually striking but decorative/ambient by nature - built for passive display (role=img, aria-hidden canvas), not for click-through to a detail view with metadata, filtering, and multiple links per item, which the projects section needs.",
+        "effortAndRisk": "Low to build (small, self-contained, real three.js so no iframe complexity) but wrong shape for the actual requirement - would work as a decorative header strip above the real project list, not as a replacement for it.",
+        "verdict": "Not a fit for the primary showcase; only worth considering later as a small decorative accent (e.g. a rotating strip of screenshots above the section heading), and only if it doesn't conflict with the Sylva-plan's mobile GPU/battery risk budget above."
+      }
+    ],
+    "recommendation": {
+      "status": "proposed - awaiting Gene's confirmation",
+      "shortTerm": "Ship the already-planned, zero-research-needed win first: featured project spans full width on desktop (site-audit-2026-09-15.json projectsPlan.layout).",
+      "mediumTerm": "Adopt character-carousel's interaction language (focused/scaled current card, receding neighbors, smooth drag) as a native React reimplementation for the desktop grid, keeping the existing data model, filter row, and MUI Dialog detail view unchanged.",
+      "notRecommended": "Do not adopt the bookshelf's full 3D shelf metaphor or the gallery's rotating cylinder as the primary showcase mechanism - both read as visual showpieces that work against the engineering-credibility positioning, mirroring the tone concern already raised about Sylva's forest scene."
+    },
+    "openQuestions": [
+      "Does Gene want the detail view itself (currently a MUI Dialog) to get a richer transition inspired by bookshelf's page-turn concept, or is the current dialog fine and only the grid/browse interaction needs work?",
+      "Is a decorative gallery-style screenshot strip wanted anywhere on the page (e.g. above the hero or projects heading), independent of the main showcase mechanism?"
+    ]
+  }
+}
