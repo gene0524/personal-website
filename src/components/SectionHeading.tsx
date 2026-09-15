@@ -1,38 +1,45 @@
 import { Box, Typography } from '@mui/material';
+import { FONT_MONO } from '../themes';
 
 interface SectionHeadingProps {
+  id?: string;
   number: string;
   title: string;
   mb?: number | string | Record<string, number | string>;
 }
 
-const SectionHeading = ({ number, title, mb = { xs: 3, md: 5 } }: SectionHeadingProps) => (
+const SectionHeading = ({ id, number, title, mb = { xs: 3, md: 5 } }: SectionHeadingProps) => (
   <Box sx={{ display: 'flex', alignItems: 'center', mb }}>
     <Typography
-      component="span"
-      sx={{
-        color: 'primary.main',
-        fontFamily: '"Space Mono", monospace',
-        fontSize: { xs: '1rem', md: '1.15rem' },
-        mr: 1.5,
-        fontWeight: 400,
-        userSelect: 'none',
-      }}
-    >
-      {number}
-    </Typography>
-    <Typography
       variant="h2"
-      component="span"
+      id={id}
       sx={{
+        display: 'flex',
+        alignItems: 'baseline',
         fontWeight: 700,
         fontSize: { xs: '2rem', md: '2.5rem' },
         mr: { xs: 0, md: 3 },
+        m: 0,
       }}
     >
+      <Box
+        component="span"
+        aria-hidden="true"
+        sx={{
+          color: 'primary.main',
+          fontFamily: FONT_MONO,
+          fontSize: { xs: '1rem', md: '1.15rem' },
+          fontWeight: 400,
+          mr: 1.5,
+          userSelect: 'none',
+        }}
+      >
+        {number}
+      </Box>
       {title}
     </Typography>
     <Box
+      aria-hidden="true"
       sx={{
         flex: 1,
         height: '1px',

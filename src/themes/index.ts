@@ -1,8 +1,13 @@
 import type { ThemeOptions, Components, Theme } from '@mui/material/styles';
 import type { TypographyOptions } from '@mui/material/styles/createTypography';
 
+export const FONT_BODY = "'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+export const FONT_DISPLAY = "'Poppins', 'Inter Variable', sans-serif";
+export const FONT_MONO = "'Space Mono', Menlo, Monaco, Consolas, monospace";
+
 export const modernTechTheme: ThemeOptions = {
   palette: {
+    mode: 'dark',
     primary: {
       main: '#00ff9d',
       light: '#6effcf',
@@ -24,79 +29,41 @@ export const modernTechTheme: ThemeOptions = {
   },
 };
 
-export const elegantDarkTheme: ThemeOptions = {
-  palette: {
-    primary: {
-      main: '#9d4edd',
-      light: '#b75cff',
-      dark: '#7b3aa3',
-    },
-    secondary: {
-      main: '#ff9e00',
-      light: '#ffb74d',
-      dark: '#c67100',
-    },
-    background: {
-      default: '#1a1a1a',
-      paper: '#2d2d2d',
-    },
-    text: {
-      primary: '#ffffff',
-      secondary: '#b3b3b3',
-    },
-  },
-};
-
-export const natureTheme: ThemeOptions = {
-  palette: {
-    primary: {
-      main: '#2ecc71',
-      light: '#58d68d',
-      dark: '#27ae60',
-    },
-    secondary: {
-      main: '#3498db',
-      light: '#5dade2',
-      dark: '#2980b9',
-    },
-    background: {
-      default: '#f8f9fa',
-      paper: '#ffffff',
-    },
-    text: {
-      primary: '#2c3e50',
-      secondary: '#7f8c8d',
-    },
-  },
-};
-
 export const typography: TypographyOptions = {
-  fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+  fontFamily: FONT_BODY,
   h1: {
     fontSize: 'clamp(2.5rem, 5vw, 4.5rem)',
     fontWeight: 800,
     letterSpacing: '-0.02em',
     lineHeight: 1.1,
-    fontFamily: "'Poppins', sans-serif",
+    fontFamily: FONT_DISPLAY,
   },
   h2: {
     fontSize: 'clamp(2rem, 4vw, 3rem)',
     fontWeight: 700,
     letterSpacing: '-0.01em',
     lineHeight: 1.3,
-    fontFamily: "'Poppins', sans-serif",
+    fontFamily: FONT_DISPLAY,
   },
   h3: {
     fontSize: 'clamp(1.5rem, 3vw, 2rem)',
     fontWeight: 700,
     lineHeight: 1.4,
-    fontFamily: "'Poppins', sans-serif",
+    fontFamily: FONT_DISPLAY,
   },
   h4: {
     fontSize: 'clamp(1.25rem, 2.5vw, 1.75rem)',
     fontWeight: 600,
     lineHeight: 1.4,
-    fontFamily: "'Poppins', sans-serif",
+    fontFamily: FONT_DISPLAY,
+  },
+  h5: {
+    fontFamily: FONT_DISPLAY,
+    fontWeight: 700,
+  },
+  h6: {
+    fontFamily: FONT_DISPLAY,
+    fontWeight: 600,
   },
   body1: {
     fontSize: 'clamp(1rem, 2vw, 1.125rem)',
@@ -138,4 +105,4 @@ export const components: Components<Theme> = {
       },
     },
   },
-}; 
+};

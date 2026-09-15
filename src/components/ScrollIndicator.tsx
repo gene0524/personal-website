@@ -1,12 +1,12 @@
 import { Box, Tooltip } from '@mui/material';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useScrollSpy } from '../hooks/useScrollSpy';
 
 const SECTIONS = [
   { id: 'hero', label: 'Home' },
   { id: 'about', label: 'About' },
   { id: 'experience', label: 'Experience' },
-  { id: 'projects', label: 'Projects' },
+  { id: 'projects', label: 'Work' },
   { id: 'travel', label: 'Travel' },
   { id: 'contact', label: 'Contact' },
 ];
@@ -20,6 +20,8 @@ const ScrollIndicator = () => {
 
   return (
     <Box
+      component="nav"
+      aria-label="Section progress"
       sx={{
         position: 'fixed',
         right: 20,
@@ -41,6 +43,7 @@ const ScrollIndicator = () => {
           >
             {index > 0 && (
               <Box
+                aria-hidden="true"
                 sx={{
                   width: '1px',
                   height: 22,
@@ -54,7 +57,10 @@ const ScrollIndicator = () => {
 
             <Tooltip title={section.label} placement="left" arrow>
               <Box
-                component={motion.div}
+                component={motion.button}
+                type="button"
+                aria-label={`Go to ${section.label}`}
+                aria-current={isActive ? 'true' : undefined}
                 onClick={() => scrollTo(section.id)}
                 animate={{
                   scale: isActive ? 1.5 : 1,
@@ -66,6 +72,8 @@ const ScrollIndicator = () => {
                 sx={{
                   width: 7,
                   height: 7,
+                  padding: 0,
+                  border: 'none',
                   borderRadius: '50%',
                   cursor: 'pointer',
                   backgroundColor: isActive
@@ -74,6 +82,11 @@ const ScrollIndicator = () => {
                   transition: 'background-color 0.4s ease',
                   '&:hover': {
                     backgroundColor: isActive ? 'primary.main' : 'rgba(255,255,255,0.6)',
+                  },
+                  '&:focus-visible': {
+                    outline: '2px solid',
+                    outlineColor: 'primary.main',
+                    outlineOffset: 4,
                   },
                 }}
               />

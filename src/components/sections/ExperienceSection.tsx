@@ -18,9 +18,9 @@ const ExperienceSection: React.FC = () => {
     <Box
       component="section"
       id="experience"
+      aria-labelledby="experience-heading"
       sx={{
         minHeight: { xs: 'auto', md: '100vh' },
-        height: { xs: 'auto', md: '100vh' },
         py: { xs: 6, md: 12 },
         position: 'relative',
         scrollSnapAlign: { xs: 'none', md: 'start' },
@@ -32,7 +32,7 @@ const ExperienceSection: React.FC = () => {
       }}
     >
       <Container maxWidth="lg">
-        <SectionHeading number="02." title="Experience" />
+        <SectionHeading id="experience-heading" number="02." title="Experience" />
 
         {/* ── Mobile: accordion ─────────────────────────────────── */}
         {isMobile && (

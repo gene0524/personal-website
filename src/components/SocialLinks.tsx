@@ -5,11 +5,12 @@ import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import InstagramIcon from '@mui/icons-material/Instagram';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { personalInfo } from '../data/personalInfo';
 
 const socialLinks = [
-  { icon: <LinkedInIcon />, url: 'https://linkedin.com/in/gene-yu-tw', label: 'LinkedIn' },
-  { icon: <GitHubIcon />,   url: 'https://github.com/gene0524',         label: 'GitHub' },
-  { icon: <InstagramIcon />, url: 'https://www.instagram.com/gene_0524_', label: 'Instagram' },
+  { icon: <LinkedInIcon />, url: personalInfo.social.linkedin, label: 'LinkedIn' },
+  { icon: <GitHubIcon />, url: personalInfo.social.github, label: 'GitHub' },
+  { icon: <InstagramIcon />, url: personalInfo.social.instagram, label: 'Instagram' },
 ];
 
 const SocialLinks = () => {
@@ -17,11 +18,13 @@ const SocialLinks = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  // ── Desktop: original fixed horizontal strip ───────────────────────────
+  // ── Desktop: fixed horizontal strip ────────────────────────────────────
   if (!isMobile) {
     return (
       <Box
         component={motion.div}
+        role="group"
+        aria-label="Social links"
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5 }}
@@ -46,13 +49,14 @@ const SocialLinks = () => {
           },
         }}
       >
-        {socialLinks.map((link, index) => (
-          <Tooltip key={index} title={link.label} placement="right">
+        {socialLinks.map(link => (
+          <Tooltip key={link.label} title={link.label} placement="right">
             <IconButton
               component={motion.a}
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label={`${link.label} (opens in new tab)`}
               whileHover={{ scale: 1.1, y: -5 }}
               whileTap={{ scale: 0.95 }}
               sx={{
@@ -93,7 +97,6 @@ const SocialLinks = () => {
         alignItems: 'center',
       }}
     >
-      {/* Sliding icon panel */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -103,6 +106,8 @@ const SocialLinks = () => {
             transition={{ duration: 0.22, ease: 'easeOut' }}
           >
             <Box
+              role="group"
+              aria-label="Social links"
               sx={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -116,50 +121,47 @@ const SocialLinks = () => {
                 borderRight: 'none',
               }}
             >
-              {socialLinks.map((link) => (
-                <Tooltip key={link.label} title={link.label} placement="right">
-                  <IconButton
-                    component="a"
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    size="small"
-                    sx={{
-                      width: 36,
-                      height: 36,
-                      color: 'primary.main',
-                      border: '1px solid rgba(0,255,157,0.35)',
-                      borderRadius: '50%',
-                      '&:hover': {
-                        backgroundColor: 'rgba(0,255,157,0.12)',
-                      },
-                    }}
-                  >
-                    {link.icon}
-                  </IconButton>
-                </Tooltip>
+              {socialLinks.map(link => (
+                <IconButton
+                  key={link.label}
+                  component="a"
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`${link.label} (opens in new tab)`}
+                  size="small"
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    color: 'primary.main',
+                    border: '1px solid rgba(0,255,157,0.35)',
+                    borderRadius: '50%',
+                    '&:hover': { backgroundColor: 'rgba(0,255,157,0.12)' },
+                  }}
+                >
+                  {link.icon}
+                </IconButton>
               ))}
             </Box>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Tab trigger — always visible */}
-      <Box
+      <IconButton
         onClick={() => setOpen(prev => !prev)}
+        aria-label={open ? 'Hide social links' : 'Show social links'}
+        aria-expanded={open}
         sx={{
           width: 20,
           height: 64,
+          padding: 0,
           backgroundColor: 'rgba(10,15,20,0.88)',
           backdropFilter: 'blur(12px)',
           border: '1px solid rgba(0,255,157,0.35)',
           borderLeft: 'none',
           borderRadius: '0 8px 8px 0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
           flexShrink: 0,
+          '&:hover': { backgroundColor: 'rgba(10,15,20,0.95)' },
         }}
       >
         <ChevronRightIcon
@@ -170,7 +172,7 @@ const SocialLinks = () => {
             transition: 'transform 0.25s ease',
           }}
         />
-      </Box>
+      </IconButton>
     </Box>
   );
 };

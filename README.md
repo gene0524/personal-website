@@ -6,14 +6,16 @@ Live: [geneyu.me](https://geneyu.me)
 
 ## Features
 
-- Animated hero with text scramble + typewriter effect
+- Animated hero with typewriter effect (respects prefers-reduced-motion)
 - Particle network background
-- Custom cursor and scroll indicator
+- Scroll progress indicator with keyboard-accessible section navigation
 - Flip cards for experience and projects
 - Section-based scroll snapping
 - Fully responsive (mobile / tablet / desktop)
 - Dark-mode optimized colour palette
-- Open Graph + Twitter Card metadata for link previews
+- Open Graph + Twitter Card metadata, JSON-LD Person schema, sitemap
+- Self-hosted fonts (Inter, Poppins, Space Mono) via @fontsource
+- Contact form posts to `VITE_CONTACT_ENDPOINT` if set, otherwise falls back to a pre-filled mailto
 
 ## Tech Stack
 
@@ -27,9 +29,7 @@ Live: [geneyu.me](https://geneyu.me)
 ```
 src/
 ├── components/
-│   ├── CustomCursor.tsx
 │   ├── Layout.tsx
-│   ├── Logo.tsx
 │   ├── ParticleNetwork.tsx
 │   ├── ScrollIndicator.tsx
 │   ├── SectionHeading.tsx
@@ -46,9 +46,7 @@ src/
 │   ├── experience.ts
 │   ├── projects.ts
 │   ├── skills.ts
-│   ├── contactInfo.ts
-│   ├── social.ts
-│   ├── socialLinks.ts
+│   ├── contactInfo.ts    # derived from personalInfo
 │   └── travel.ts
 ├── hooks/                  # Custom React hooks
 └── themes/                 # Theme configuration
@@ -56,7 +54,9 @@ src/
 public/
 ├── og-image.png            # Open Graph preview image
 ├── og-image.svg            # OG image source (regenerate via rsvg-convert)
-├── favicon.svg
+├── favicon.svg / apple-touch-icon.png / icon-*.png
+├── manifest.json / sitemap.xml / robots.txt
+├── globe/                  # world atlas + earth texture (WebP)
 └── assets/
     └── images/
         ├── profile/        # Profile photos
@@ -67,14 +67,13 @@ public/
 
 | What to change          | File                                |
 | ----------------------- | ----------------------------------- |
-| Name / title / about    | `src/data/personalInfo.ts`          |
+| Name / title / about / email / socials | `src/data/personalInfo.ts` |
 | Work + education        | `src/data/experience.ts`            |
 | Project showcase        | `src/data/projects.ts`              |
 | Skills                  | `src/data/skills.ts`                |
-| Contact info            | `src/data/contactInfo.ts`           |
-| Social links            | `src/data/socialLinks.ts`           |
 | Travel map data         | `src/data/travel.ts`                |
-| Profile photo           | `public/assets/images/profile/myPhoto.jpg` |
+| Profile photo           | `assets-src/profile/myPhoto.jpg` (WebP generated) |
+| Resume PDF              | `assets-src/resume/CV_ChunYu.pdf` → copy to `public/assets/files/resume.pdf` |
 | Project screenshots     | `public/assets/images/projects/`    |
 
 ## Development

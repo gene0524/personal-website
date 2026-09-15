@@ -6,7 +6,8 @@ import SmartToyIcon from '@mui/icons-material/SmartToy';
 import StorageIcon from '@mui/icons-material/Storage';
 import CloudIcon from '@mui/icons-material/Cloud';
 import { personalInfo } from '../../data/personalInfo';
-import { skills } from '../../data/skills';
+import { skills, certificates } from '../../data/skills';
+import { FONT_MONO } from '../../themes';
 import SectionHeading from '../SectionHeading';
 
 const iconMap = {
@@ -23,9 +24,9 @@ const AboutSection: React.FC = () => {
     <Box
       component="section"
       id="about"
+      aria-labelledby="about-heading"
       sx={{
         minHeight: { xs: 'auto', md: '100vh' },
-        height: { xs: 'auto', md: '100vh' },
         py: { xs: 6, md: 12 },
         position: 'relative',
         scrollSnapAlign: { xs: 'none', md: 'start' },
@@ -35,7 +36,7 @@ const AboutSection: React.FC = () => {
       }}
     >
       <Container maxWidth="lg">
-        <SectionHeading number="01." title="About Me" />
+        <SectionHeading id="about-heading" number="01." title="About Me" />
 
         <Grid container spacing={4} alignItems="flex-start">
           <Grid item xs={12} md={6}>
@@ -60,6 +61,12 @@ const AboutSection: React.FC = () => {
             >
               {personalInfo.about.additional}
             </Typography>
+            <Typography
+              variant="body2"
+              sx={{ mt: { xs: 2, md: 3 }, color: 'text.secondary', fontFamily: FONT_MONO, fontSize: { xs: '0.78rem', md: '0.85rem' } }}
+            >
+              Certificates: {certificates.join(' · ')}
+            </Typography>
           </Grid>
 
           <Grid item xs={12} md={6}>
@@ -76,7 +83,24 @@ const AboutSection: React.FC = () => {
                     >
                       {/* Flip card wrapper — hover on desktop, tap on touch */}
                       <Box
-                        sx={{ perspective: '1200px', height: { xs: '160px', md: '230px' } }}
+                        role="button"
+                        tabIndex={0}
+                        aria-pressed={flippedIndex === index}
+                        aria-label={`${skill.category}: ${skill.items.join(', ')}`}
+                        sx={{
+                          perspective: '1200px',
+                          height: { xs: '160px', md: '230px' },
+                          outline: 'none',
+                          '&:focus-visible > div': { boxShadow: '0 0 0 2px #00ff9d' },
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setFlippedIndex(prev => prev === index ? null : index);
+                          }
+                        }}
+                        onFocus={() => setFlippedIndex(index)}
+                        onBlur={() => setFlippedIndex(prev => (prev === index ? null : prev))}
                         onMouseEnter={() => {
                           if (!window.matchMedia('(hover: none)').matches) setFlippedIndex(index);
                         }}
@@ -126,6 +150,7 @@ const AboutSection: React.FC = () => {
                             />
                             <Typography
                               variant="h6"
+                              component="h3"
                               sx={{
                                 fontWeight: 600,
                                 fontSize: { xs: '0.85rem', md: '1.05rem' },
@@ -171,7 +196,7 @@ const AboutSection: React.FC = () => {
                                   sx={{
                                     color: 'text.secondary',
                                     fontSize: { xs: '0.78rem', md: '0.92rem' },
-                                    fontFamily: '"Space Mono", monospace',
+                                    fontFamily: FONT_MONO,
                                   }}
                                 >
                                   {item}

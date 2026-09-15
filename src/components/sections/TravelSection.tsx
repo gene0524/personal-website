@@ -293,6 +293,7 @@ const TravelSection: React.FC = () => {
     <Box
       component="section"
       id="travel"
+      aria-labelledby="travel-heading"
       sx={{
         minHeight: { xs: 'auto', md: '100vh' },
         py: { xs: 6, md: 0 },
@@ -303,7 +304,7 @@ const TravelSection: React.FC = () => {
       }}
     >
       <Container maxWidth="lg">
-        <SectionHeading number="04." title="Travel" mb={{ xs: 1, md: 1.5 }} />
+        <SectionHeading id="travel-heading" number="04." title="Travel" mb={{ xs: 1, md: 1.5 }} />
 
         {/* Humorous subtitle */}
         <Typography
@@ -394,7 +395,7 @@ const TravelSection: React.FC = () => {
                 width={globeSize}
                 height={globeSize}
                 backgroundColor="rgba(0,0,0,0)"
-                globeImageUrl="/globe/earth-night.jpg"
+                globeImageUrl="/globe/earth-night.webp"
                 atmosphereColor="#00c8ff"
                 atmosphereAltitude={0.18}
                 polygonsData={countries}

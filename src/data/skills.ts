@@ -1,22 +1,28 @@
+// Mirrors the "Technical Skills" block of the CV (assets-src/resume/CV_ChunYu.pdf).
 export const skills = [
   {
-    category: 'Frontend',
-    items: ['React', 'TypeScript', 'JavaScript', 'CSS'],
-    icon: 'CodeIcon'
+    category: 'Languages',
+    items: ['Python', 'C++', 'Java', 'TypeScript', 'SQL', 'Verilog', 'MATLAB'],
+    icon: 'CodeIcon',
   },
   {
-    category: 'AI & Agents',
-    items: ['OpenAI & Claude', 'MCP & Agents', 'LLM Integration', 'Prompt Engineering'],
-    icon: 'SmartToyIcon'
+    category: 'Cloud & DevOps',
+    items: ['AWS (EC2, S3, Lambda)', 'Azure', 'Docker', 'CI/CD', 'Monitoring'],
+    icon: 'CloudIcon',
   },
   {
-    category: 'Backend',
-    items: ['Python', 'Node.js', 'SQL', 'REST APIs'],
-    icon: 'StorageIcon'
+    category: 'Backend & Data',
+    items: ['Node.js', 'REST APIs', 'FIX protocol', 'Time-series analysis'],
+    icon: 'StorageIcon',
   },
   {
-    category: 'Cloud',
-    items: ['AWS', 'Azure', 'Docker', 'CI/CD'],
-    icon: 'CloudIcon'
-  }
+    category: 'AI-Assisted Dev',
+    items: ['Claude & agents', 'MCP / tool use', 'Prompt design', 'React front-ends'],
+    icon: 'SmartToyIcon',
+  },
+];
+
+export const certificates = [
+  'AWS DevOps Specialization',
+  'Meta Front-End Developer (Coursera)',
 ];

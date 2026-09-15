@@ -1,59 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Container, Typography, Grid } from '@mui/material';
-import { motion } from 'framer-motion';
+import { Box, Container, Typography, Grid, Button } from '@mui/material';
+import { motion, useReducedMotion } from 'framer-motion';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import DownloadIcon from '@mui/icons-material/Download';
 import { personalInfo } from '../../data/personalInfo';
 import ParticleNetwork from '../ParticleNetwork';
-
-const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$&*';
-
-const useTextScramble = (text: string, startDelay = 400) => {
-  const [output, setOutput] = useState('');
-
-  useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>;
-    let raf: number;
-    let startTime: number | null = null;
-    const duration = text.length * 60;
-
-    timeout = setTimeout(() => {
-      const animate = (ts: number) => {
-        if (!startTime) startTime = ts;
-        const progress = Math.min((ts - startTime) / duration, 1);
-        const resolved = Math.floor(progress * text.length);
-
-        setOutput(
-          text.split('').map((char, i) => {
-            if (char === ' ') return ' ';
-            if (i < resolved) return char;
-            return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
-          }).join('')
-        );
-
-        if (progress < 1) raf = requestAnimationFrame(animate);
-      };
-      raf = requestAnimationFrame(animate);
-    }, startDelay);
-
-    return () => { clearTimeout(timeout); cancelAnimationFrame(raf); };
-  }, [text, startDelay]);
-
-  return output;
-};
+import { FONT_MONO } from '../../themes';
 
 const ROLES = [
   'Software Engineer',
+  'Trading Systems',
   'Mostly AI, Slightly Human',
-  'Imperial MSc \'24',
 ];
 
-const useTypewriter = () => {
+const useTypewriter = (enabled: boolean) => {
   const [phraseIdx, setPhraseIdx] = useState(0);
-  const [text, setText] = useState('');
+  const [text, setText] = useState(enabled ? '' : ROLES[0]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [waiting, setWaiting] = useState(false);
 
   useEffect(() => {
-    if (waiting) return;
+    if (!enabled || waiting) return;
     const phrase = ROLES[phraseIdx];
     const delay = isDeleting ? 40 : 95;
 
@@ -76,22 +43,25 @@ const useTypewriter = () => {
     }, delay);
 
     return () => clearTimeout(timeout);
-  }, [text, isDeleting, phraseIdx, waiting]);
+  }, [enabled, text, isDeleting, phraseIdx, waiting]);
 
   return text;
 };
 
+const scrollTo = (id: string) =>
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
 const HeroSection: React.FC = () => {
-  const scrambledName = useTextScramble(personalInfo.name, 500);
-  const typedRole = useTypewriter();
+  const reducedMotion = useReducedMotion();
+  const typedRole = useTypewriter(!reducedMotion);
 
   return (
     <Box
       component="section"
       id="hero"
+      aria-labelledby="hero-name"
       sx={{
         minHeight: { xs: 'auto', md: '100vh' },
-        height: { xs: 'auto', md: '100vh' },
         py: { xs: 8, md: 12 },
         position: 'relative',
         overflow: 'hidden',
@@ -102,7 +72,7 @@ const HeroSection: React.FC = () => {
         justifyContent: 'center',
       }}
     >
-      <ParticleNetwork />
+      {!reducedMotion && <ParticleNetwork />}
 
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
         <Grid container spacing={4} alignItems="center">
@@ -114,30 +84,31 @@ const HeroSection: React.FC = () => {
               transition={{ duration: 0.8 }}
             >
               <Typography
+                component="p"
                 sx={{
                   color: 'primary.main',
-                  fontFamily: '"Space Mono", monospace',
+                  fontFamily: FONT_MONO,
                   fontSize: { xs: '0.85rem', md: '0.95rem' },
                   mb: 1,
                   letterSpacing: '0.12em',
                 }}
               >
-                Hi, my name is
+                {personalInfo.company} · {personalInfo.location}
               </Typography>
 
               <Typography
                 variant="h1"
+                id="hero-name"
                 sx={{
                   fontSize: { xs: '2.8rem', md: '5rem' },
                   fontWeight: 800,
                   mb: 1.5,
                   letterSpacing: '-0.02em',
                   lineHeight: 1.05,
-                  fontFamily: '"Space Mono", monospace',
-                  minHeight: { xs: '3.5rem', md: '5.5rem' },
+                  fontFamily: FONT_MONO,
                 }}
               >
-                {scrambledName || ' '}
+                {personalInfo.name}
               </Typography>
 
               {/* Typewriter row */}
@@ -150,44 +121,97 @@ const HeroSection: React.FC = () => {
                 }}
               >
                 <Typography
-                  variant="h2"
+                  component="p"
                   color="primary"
+                  aria-live="off"
                   sx={{
                     fontSize: { xs: '1.1rem', md: '1.5rem' },
                     fontWeight: 500,
-                    fontFamily: '"Space Mono", monospace',
+                    fontFamily: FONT_MONO,
                     letterSpacing: '0.02em',
+                    m: 0,
                   }}
                 >
                   {typedRole}
                 </Typography>
-                <Box
-                  sx={{
-                    width: '2px',
-                    height: { xs: '1.1rem', md: '1.5rem' },
-                    backgroundColor: 'primary.main',
-                    ml: 0.5,
-                    flexShrink: 0,
-                    animation: 'blink 1s step-end infinite',
-                    '@keyframes blink': {
-                      '0%, 100%': { opacity: 1 },
-                      '50%': { opacity: 0 },
-                    },
-                  }}
-                />
+                {!reducedMotion && (
+                  <Box
+                    aria-hidden="true"
+                    sx={{
+                      width: '2px',
+                      height: { xs: '1.1rem', md: '1.5rem' },
+                      backgroundColor: 'primary.main',
+                      ml: 0.5,
+                      flexShrink: 0,
+                      animation: 'blink 1s step-end infinite',
+                      '@keyframes blink': {
+                        '0%, 100%': { opacity: 1 },
+                        '50%': { opacity: 0 },
+                      },
+                    }}
+                  />
+                )}
               </Box>
 
               <Typography
                 variant="body1"
                 sx={{
                   fontSize: { xs: '1rem', md: '1.1rem' },
-                  color: 'text.secondary',
+                  color: 'text.primary',
                   maxWidth: '560px',
                   lineHeight: 1.8,
+                  mb: 1.5,
                 }}
               >
-                {personalInfo.description}
+                {personalInfo.tagline}
               </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: { xs: '0.9rem', md: '0.95rem' },
+                  color: 'text.secondary',
+                  maxWidth: '560px',
+                  lineHeight: 1.7,
+                  mb: { xs: 3, md: 4 },
+                }}
+              >
+                {personalInfo.proof}
+              </Typography>
+
+              <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                <Button
+                  variant="contained"
+                  endIcon={<ArrowDownwardIcon />}
+                  onClick={() => scrollTo('projects')}
+                  sx={{
+                    backgroundColor: 'primary.main',
+                    color: 'background.default',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    borderRadius: '999px',
+                    '&:hover': { backgroundColor: 'primary.dark' },
+                  }}
+                >
+                  See projects
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<DownloadIcon />}
+                  href={personalInfo.resumeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{
+                    borderColor: 'rgba(0,255,157,0.4)',
+                    color: 'primary.main',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    borderRadius: '999px',
+                    '&:hover': { borderColor: 'primary.main', backgroundColor: 'rgba(0,255,157,0.08)' },
+                  }}
+                >
+                  Resume
+                </Button>
+              </Box>
             </motion.div>
           </Grid>
 
@@ -211,42 +235,46 @@ const HeroSection: React.FC = () => {
                 }}
               >
                 {/* Pulse glow */}
-                <Box sx={{
+                <Box aria-hidden="true" sx={{
                   position: 'absolute',
                   inset: -16,
                   borderRadius: '50%',
                   background: 'radial-gradient(circle, rgba(0,255,157,0.18) 0%, transparent 70%)',
                   filter: 'blur(16px)',
-                  animation: 'glow 3s ease-in-out infinite',
+                  animation: reducedMotion ? 'none' : 'glow 3s ease-in-out infinite',
                   '@keyframes glow': {
                     '0%, 100%': { opacity: 0.6, transform: 'scale(1)' },
                     '50%': { opacity: 1, transform: 'scale(1.06)' },
                   },
                 }} />
                 {/* Rotating dashed ring */}
-                <Box sx={{
+                <Box aria-hidden="true" sx={{
                   position: 'absolute',
                   inset: -10,
                   borderRadius: '50%',
                   border: '1.5px dashed rgba(0,255,157,0.3)',
-                  animation: 'spin 22s linear infinite',
+                  animation: reducedMotion ? 'none' : 'spin 22s linear infinite',
                   '@keyframes spin': {
                     '0%': { transform: 'rotate(0deg)' },
                     '100%': { transform: 'rotate(360deg)' },
                   },
                 }} />
                 {/* Solid border */}
-                <Box sx={{
+                <Box aria-hidden="true" sx={{
                   position: 'absolute',
                   inset: -2,
                   borderRadius: '50%',
                   border: '2px solid rgba(0,255,157,0.25)',
                 }} />
-                {/* Photo */}
+                {/* Photo (LCP element) */}
                 <Box
                   component="img"
                   src={personalInfo.avatarUrl}
-                  alt="Profile"
+                  alt="Gene Yu"
+                  width={900}
+                  height={900}
+                  fetchPriority="high"
+                  decoding="async"
                   sx={{
                     width: '100%',
                     height: '100%',
