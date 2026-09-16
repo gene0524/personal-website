@@ -2,12 +2,16 @@
 export const skills = [
   {
     category: 'Languages',
-    items: ['Python', 'C++', 'Java', 'TypeScript', 'SQL', 'Verilog', 'MATLAB'],
+    // Trimmed from 7 to match the other three cards (4 items) - Java, Verilog
+    // and MATLAB dropped as the least central to current work; still on the CV.
+    items: ['Python', 'TypeScript', 'C++', 'SQL'],
     icon: 'CodeIcon',
   },
   {
     category: 'Cloud & DevOps',
-    items: ['AWS (EC2, S3, Lambda)', 'Azure', 'Docker', 'CI/CD', 'Monitoring'],
+    // Trimmed from 5 to 4; "AWS (EC2, S3, Lambda)" shortened to "AWS" - the
+    // parenthetical was the main source of visual crowding in the small card.
+    items: ['AWS', 'Azure', 'Docker', 'CI/CD'],
     icon: 'CloudIcon',
   },
   {
