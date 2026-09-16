@@ -27,7 +27,9 @@ import { contactInfo } from '../../data/contactInfo';
 // Optional form backend (Formspree / Web3Forms style JSON endpoint).
 // When unset, the form falls back to opening the visitor's email client with
 // the message pre-filled, so it never claims to have sent something it hasn't.
+// Web3Forms additionally needs its (public) access key in the payload.
 const CONTACT_ENDPOINT = import.meta.env.VITE_CONTACT_ENDPOINT as string | undefined;
+const CONTACT_ACCESS_KEY = import.meta.env.VITE_CONTACT_ACCESS_KEY as string | undefined;
 
 interface FormData {
   name: string;
@@ -153,7 +155,11 @@ const ContactSection: React.FC = () => {
       const res = await fetch(CONTACT_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          ...(CONTACT_ACCESS_KEY ? { access_key: CONTACT_ACCESS_KEY } : {}),
+          subject: `Message from ${formData.name} via geneyu.me`,
+        }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setSnackbar({ open: true, message: 'Message sent. I will get back to you soon.', severity: 'success' });
