@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Box, Typography, Container, Grid, Paper,
   useTheme, useMediaQuery,
@@ -11,6 +11,16 @@ const ExperienceSection: React.FC = () => {
   const [activeStep, setActiveStep] = useState(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  // Mobile: the detail panel sits after the whole row list, so tapping a
+  // row near the top can leave its description well off the bottom of the
+  // screen. scrollIntoView({block:'nearest'}) only moves the viewport the
+  // minimum amount needed to reveal the panel (no-op if it's already
+  // visible) - cheap native smooth scroll, not a layout reflow.
+  const panelRef = useRef<HTMLDivElement>(null);
+  const selectExperience = (index: number) => {
+    setActiveStep(index);
+    panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
 
   return (
     <Box
@@ -55,7 +65,7 @@ const ExperienceSection: React.FC = () => {
                     type="button"
                     aria-pressed={isActive}
                     aria-controls="experience-detail-panel"
-                    onClick={() => setActiveStep(index)}
+                    onClick={() => selectExperience(index)}
                     sx={{
                       all: 'unset', boxSizing: 'border-box', width: '100%', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', gap: 1.5,
@@ -105,6 +115,7 @@ const ExperienceSection: React.FC = () => {
             </Box>
 
             <Paper
+              ref={panelRef}
               id="experience-detail-panel"
               aria-live="polite"
               elevation={0}
