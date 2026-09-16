@@ -3,7 +3,6 @@ import {
   Box, Typography, Container, Grid, Paper,
   useTheme, useMediaQuery,
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { experiences } from '../../data/experience';
 import SectionHeading from '../SectionHeading';
@@ -33,116 +32,105 @@ const ExperienceSection: React.FC = () => {
       <Container maxWidth="lg">
         <SectionHeading id="experience-heading" number="02." title="Experience" />
 
-        {/* ── Mobile: accordion ─────────────────────────────────── */}
+        {/* ── Mobile: compact list + one persistent detail panel ───
+            An accordion (however implemented - MUI's JS-measured Collapse,
+            then grid-template-rows) fundamentally means each tap resizes a
+            box and pushes every item below it, and that reflow is real work
+            regardless of how it's driven. This sidesteps the problem instead
+            of continuing to optimise it: rows never resize (just a border/
+            background highlight, both compositor-only), and only ONE
+            fixed-position panel below the list crossfades content - the
+            same pattern already proven smooth in the desktop layout below,
+            just restacked vertically for a narrow screen. */}
         {isMobile && (
-          // contain:layout+style isolates this list's internal reflow (each
-          // tap resizing one item, pushing the ones below) from the rest of
-          // the page - the browser can skip checking whether anything
-          // outside this box needs to react, instead of walking back up
-          // through ancestors on every expand/collapse.
-          <Box sx={{ contain: 'layout style' }}>
-            {experiences.map((exp, index) => {
-              const IconComponent = exp.icon;
-              const expanded = activeStep === index;
-              const panelId = `experience-panel-${index}`;
-              return (
-                <Box
-                  key={exp.title}
-                  sx={{
-                    backgroundColor: 'background.paper',
-                    border: '1px solid',
-                    borderColor: expanded ? 'rgba(0,255,157,0.35)' : 'divider',
-                    borderRadius: '8px',
-                    mb: 1.5,
-                    overflow: 'hidden',
-                    transition: 'border-color 0.3s',
-                  }}
-                >
+          <Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2.5 }}>
+              {experiences.map((exp, index) => {
+                const IconComponent = exp.icon;
+                const isActive = activeStep === index;
+                return (
                   <Box
+                    key={exp.title}
                     component="button"
                     type="button"
-                    aria-expanded={expanded}
-                    aria-controls={panelId}
-                    onClick={() => setActiveStep(expanded ? -1 : index)}
+                    aria-pressed={isActive}
+                    aria-controls="experience-detail-panel"
+                    onClick={() => setActiveStep(index)}
                     sx={{
                       all: 'unset', boxSizing: 'border-box', width: '100%', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1,
-                      px: 2, py: 1,
+                      display: 'flex', alignItems: 'center', gap: 1.5,
+                      px: 2, py: 1.1,
+                      borderRadius: '8px',
+                      border: '1px solid',
+                      borderColor: isActive ? 'rgba(0,255,157,0.35)' : 'divider',
+                      backgroundColor: isActive ? 'rgba(0,255,157,0.06)' : 'background.paper',
+                      transition: 'border-color 0.3s, background-color 0.3s',
                     }}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Box
+                    <Box
+                      sx={{
+                        width: 34, height: 34,
+                        borderRadius: '50%',
+                        border: '2px solid',
+                        borderColor: isActive ? 'primary.main' : 'divider',
+                        backgroundColor: isActive ? 'rgba(0,255,157,0.1)' : 'background.default',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0,
+                        boxShadow: isActive ? '0 0 10px rgba(0,255,157,0.35)' : 'none',
+                        transition: 'border-color 0.3s, background-color 0.3s, box-shadow 0.3s',
+                      }}
+                    >
+                      <IconComponent sx={{ fontSize: 16, color: isActive ? 'primary.main' : 'text.secondary' }} />
+                    </Box>
+                    <Box sx={{ textAlign: 'left', minWidth: 0 }}>
+                      <Typography
                         sx={{
-                          width: 34, height: 34,
-                          borderRadius: '50%',
-                          border: '2px solid',
-                          borderColor: expanded ? 'primary.main' : 'divider',
-                          backgroundColor: expanded ? 'rgba(0,255,157,0.1)' : 'background.default',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          flexShrink: 0,
-                          boxShadow: expanded ? '0 0 10px rgba(0,255,157,0.35)' : 'none',
-                          transition: 'all 0.3s',
+                          fontWeight: 700,
+                          fontSize: '0.92rem',
+                          color: isActive ? 'text.primary' : 'text.secondary',
+                          lineHeight: 1.3,
                         }}
                       >
-                        <IconComponent sx={{ fontSize: 16, color: expanded ? 'primary.main' : 'text.secondary' }} />
-                      </Box>
-                      <Box sx={{ textAlign: 'left' }}>
-                        <Typography
-                          sx={{
-                            fontWeight: 700,
-                            fontSize: '0.95rem',
-                            color: expanded ? 'text.primary' : 'text.secondary',
-                            lineHeight: 1.3,
-                          }}
-                        >
-                          {exp.title}
-                        </Typography>
-                        <Typography
-                          sx={{ fontSize: '0.82rem', color: 'primary.main', lineHeight: 1.3 }}
-                        >
-                          {exp.company}
-                        </Typography>
-                        <Typography
-                          sx={{ fontSize: '0.75rem', color: 'text.secondary', fontFamily: '"Space Mono", monospace' }}
-                        >
-                          {exp.period}
-                        </Typography>
-                      </Box>
+                        {exp.title}
+                      </Typography>
+                      <Typography
+                        sx={{ fontSize: '0.78rem', color: isActive ? 'primary.main' : 'text.secondary', lineHeight: 1.3, fontFamily: '"Space Mono", monospace' }}
+                      >
+                        {exp.company} · {exp.period}
+                      </Typography>
                     </Box>
-                    <ExpandMoreIcon
-                      sx={{
-                        color: expanded ? 'primary.main' : 'text.secondary',
-                        flexShrink: 0,
-                        transform: expanded ? 'rotate(180deg)' : 'none',
-                        transition: 'transform 0.3s',
-                      }}
-                    />
                   </Box>
+                );
+              })}
+            </Box>
 
-                  {/* grid-template-rows 0fr->1fr instead of MUI Collapse's
-                      JS-measured height animation - height animates without
-                      the browser re-measuring scrollHeight and forcing
-                      layout on every frame, which was the actual jank source
-                      when collapsing one card while expanding another. */}
-                  <Box
-                    id={panelId}
-                    role="region"
-                    sx={{ display: 'grid', gridTemplateRows: expanded ? '1fr' : '0fr', transition: 'grid-template-rows 0.3s ease' }}
-                  >
-                    <Box sx={{ overflow: 'hidden' }}>
-                      <Box sx={{ px: 2, pt: 0, pb: 2, borderTop: '1px solid rgba(0,255,157,0.15)' }}>
-                        <Typography
-                          variant="body2"
-                          sx={{ fontSize: '0.9rem', lineHeight: 1.7, color: 'text.secondary' }}
-                        >
-                          {exp.description}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Box>
-                </Box>
-              );
-            })}
+            <Paper
+              id="experience-detail-panel"
+              aria-live="polite"
+              elevation={0}
+              sx={{
+                p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 2,
+                position: 'relative', overflow: 'hidden', contain: 'layout style',
+                '&::before': {
+                  content: '""', position: 'absolute', top: 0, left: 0,
+                  width: 3, height: '100%', backgroundColor: 'primary.main', borderRadius: '2px 0 0 2px',
+                },
+              }}
+            >
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeStep}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Typography variant="body2" sx={{ fontSize: '0.9rem', lineHeight: 1.7, color: 'text.secondary' }}>
+                    {experiences[activeStep].description}
+                  </Typography>
+                </motion.div>
+              </AnimatePresence>
+            </Paper>
           </Box>
         )}
 
