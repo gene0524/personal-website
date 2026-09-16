@@ -128,7 +128,13 @@
       "why": "The main index chunk is 210KB gzip and, per the original audit, already had an 'unused-javascript ~81KiB' finding before this session added more section code (About's flip cards, the Work filmstrip's StageCard/Filmstrip logic, the hero button/typewriter logic). Everything below the fold currently ships in the same eagerly-loaded bundle as the hero.",
       "how": "React.lazy() + the same IntersectionObserver-gated placeholder pattern already used for DeferredTravelSection, applied to ExperienceSection, ProjectsSection and ContactSection (About probably stays eager since it's usually the first scroll target). Each becomes its own chunk, loaded just before it scrolls into view.",
       "effort": "~1 day (mostly placeholder/height-reservation work to avoid layout shift, CLS is currently a perfect 0 and must stay that way)",
-      "status": "todo"
+      "status": "done",
+      "result": {
+        "implementation": "Generalized DeferredTravelSection (App.tsx) into a reusable DeferredSection component: idle-prefetch the code via requestIdleCallback (decoupled from scroll position) + defer actual mounting until an IntersectionObserver with a generous rootMargin says it is getting close. Applied to ExperienceSection, ProjectsSection, ContactSection. About stays eager per the original plan (usually the very next thing scrolled to after Hero).",
+        "bundleImpact": "Main chunk 651.58KB/207.23KB gzip -> 526.37KB/169.50KB gzip. ExperienceSection 7.87KB, ProjectsSection 43.48KB, ContactSection 70.57KB now split out as separate chunks.",
+        "verification": "Puppeteer against a production preview build: all three chunks fire in parallel ~828ms after page load with zero scrolling toward them; all three sections render real content once scrolled to; zero console/page errors.",
+        "verdict": "Done, closes out the last remaining item from the original P1-P5 plan (P4 was judged unnecessary after P1/P2/WF-round fixes; P5 remains the explicit fallback if device testing still shows problems)."
+      }
     },
     {
       "priority": 4,
