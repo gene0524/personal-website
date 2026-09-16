@@ -439,9 +439,14 @@ const Filmstrip: React.FC<FilmstripProps> = ({ items, onOpen, onActiveChange, re
     const t = trackRef.current;
     if (!t) return;
     t.dataset.inView = 'true';
+    // threshold 0 (the default) flips this on the instant a single pixel of
+    // the track enters the viewport - exactly the moment the user is still
+    // mid-scroll past the section boundary, stacking the animation-restart
+    // cost on top of the scroll itself. 0.35 delays it until the section is
+    // substantially in view, past that transition zone.
     const io = new IntersectionObserver(([entry]) => {
       t.dataset.inView = String(entry?.isIntersecting ?? true);
-    });
+    }, { threshold: 0.35 });
     io.observe(t);
     return () => io.disconnect();
   }, []);
@@ -468,17 +473,18 @@ const Filmstrip: React.FC<FilmstripProps> = ({ items, onOpen, onActiveChange, re
 
   const arrowSx = {
     position: 'absolute',
-    top: '30%',
+    top: '45%',
     zIndex: 2,
     width: 44,
     height: 44,
+    opacity: 0.55,
     color: 'text.primary',
     backgroundColor: 'rgba(7,9,15,0.6)',
     backdropFilter: 'blur(10px)',
     WebkitBackdropFilter: 'blur(10px)',
     border: GLASS_STROKE,
     transition: 'opacity 0.2s, border-color 0.2s, color 0.2s',
-    '&:hover': { borderColor: 'primary.main', color: 'primary.main', backgroundColor: 'rgba(7,9,15,0.75)' },
+    '&:hover': { opacity: 1, borderColor: 'primary.main', color: 'primary.main', backgroundColor: 'rgba(7,9,15,0.75)' },
     '&.Mui-disabled': { opacity: 0 },
   } as const;
 
