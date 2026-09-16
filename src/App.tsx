@@ -31,11 +31,25 @@ const DeferredTravelSection: React.FC = () => {
   // time instead of gambling on a fixed pixel margin. This only warms the
   // module cache; shouldLoad below still controls when it actually mounts
   // and runs its setup.
+  //
+  // Prefetching the JS wasn't the whole story: TravelSection's own
+  // useEffect fetches a ~108KB world-atlas JSON (/globe/countries-110m.json)
+  // and react-globe.gl separately loads a ~70KB texture
+  // (/globe/earth-night.webp) - both only start once the component actually
+  // mounts, a second serial network round-trip stacked after the first
+  // (chunk download -> parse -> mount -> THEN fetch data -> THEN render the
+  // globe). Firing all three in parallel during the same idle window means
+  // by the time shouldLoad flips true, everything is already sitting in the
+  // browser's HTTP/image cache and TravelSection's own fetch/Image resolve
+  // instantly instead of hitting the network again.
   useEffect(() => {
     const idle = (window as unknown as { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
-    const id = idle
-      ? idle(() => { import('./components/sections/TravelSection'); })
-      : window.setTimeout(() => { import('./components/sections/TravelSection'); }, 2000);
+    const prefetch = () => {
+      import('./components/sections/TravelSection');
+      fetch('/globe/countries-110m.json').catch(() => {});
+      new Image().src = '/globe/earth-night.webp';
+    };
+    const id = idle ? idle(prefetch) : window.setTimeout(prefetch, 2000);
     return () => { if (!idle) window.clearTimeout(id); };
   }, []);
 
