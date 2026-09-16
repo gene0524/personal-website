@@ -216,6 +216,20 @@
         "verification": "Puppeteer: typed text freezes immediately on scrolling to Experience and stays frozen (5 samples, all identical); still types/pauses/deletes normally when visible on the hero (verified against the existing verify-typewriter.mjs script). Typecheck clean.",
         "verdict": "Pending Gene's re-test - ideally another Web Inspector recording of Experience to confirm this was actually the remaining cause, since WF8's contain:layout change may have been masking rather than fixing anything (its trace looked good by coincidence, or genuinely helped but got outweighed by the typewriter running the whole time in both recordings). Lesson repeated a third time this investigation: 'off-screen doesn't automatically mean paused' is the single most recurring bug category here (OrbitalSystem poll, Work breathing ring, now the typewriter) - worth an explicit check for this pattern before believing any future 'still janky' report is something new."
       }
+    },
+    {
+      "priority": "discovered mid-session, not in original P1-P5",
+      "id": "WF10",
+      "name": "Round 10: still janky after WF9 - full codebase sweep instead of another one-at-a-time guess",
+      "why": "Gene, after WF9: '測完了，還是卡 你到底有沒有辦法可以根治這個問題 你是找不到根因嗎' (still janky, can you actually root-cause this or can you just not find it) - fair pushback after three straight rounds of finding one off-screen-doesn't-pause bug at a time via individual traces. Decided the right response was an exhaustive, systematic sweep of every continuous-loop primitive in the codebase in one pass, not another reactive single-bug fix.",
+      "how": "grep across all of src/ for every requestAnimationFrame call, every setInterval, every CSS `animation: ... infinite`, and every setTimeout usage. Cross-checked each result against whether it already has visibility gating. Found one more: HeroSection's rotating dashed ring around the portrait (animation: spin 22s linear infinite) - explicitly flagged as a known-but-lower-priority candidate back in WF5 and never actually fixed. Confirmed every other hit is already accounted for: OrbitalSystem's tick loop (gated, WF4), ProjectsSection's breathing ring (gated, WF5) and scroll-rAF-throttle (one-shot coalescing, not a continuous-animation concern), OrbitalSystem's scroll-rAF-throttle (same), the hero typewriter (gated, WF9), and Layout.tsx's nav-logo gradient animation (correctly always-on - it's in the persistent header, genuinely never off-screen, not a bug).",
+      "effort": "~0.25 day for the sweep + fix",
+      "status": "done-pending-device-confirmation",
+      "result": {
+        "implementation": "Added an IntersectionObserver reusing the existing portraitRef (no new DOM node) at the HeroSection level, driving a heroVisible boolean that gates the ring's animationPlayState the same way as the three earlier fixes.",
+        "verification": "Puppeteer: the dashed-ring element's computed animationPlayState is 'running' while on the hero, 'paused' after scrolling to Experience.",
+        "verdict": "This closes out every currently-known always-on animation source in the codebase - there is nothing else left in this specific bug category (off-screen elements/timers that don't pause) to find via more sweeping. If Experience is STILL janky after this, the honest next step is not another JS/CSS audit of the hero, but either (a) a real device trace scoped to confirm whether ANY background activity remains at all during the tap (if none does, the accordion's own reflow cost - already characterized as low-CPU/tap-correlated in the WF8 trace - is what's left, meaning further improvement requires changing the reveal design itself, e.g. an overlay expand that doesn't push sibling content, not another optimization of the current push-down approach), or (b) accepting that 'still a bit janky' on this specific device/interaction may be close to the practical floor for a CSS box-height transition and the P5 low-end-device-fallback idea becomes the more honest lever than continuing to chase this one interaction."
+      }
     }
   ],
   "openQuestions": [
