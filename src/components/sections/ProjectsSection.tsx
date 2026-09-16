@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   Typography,
@@ -9,15 +9,27 @@ import {
   IconButton,
   useMediaQuery,
 } from '@mui/material';
-import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
+import { alpha, useTheme } from '@mui/material/styles';
+import {
+  motion,
+  useReducedMotion,
+  AnimatePresence,
+  useScroll,
+  useTransform,
+  useMotionValue,
+  useSpring,
+  useMotionTemplate,
+} from 'framer-motion';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import ArticleIcon from '@mui/icons-material/Article';
 import YouTubeIcon from '@mui/icons-material/YouTube';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import Inventory2Icon from '@mui/icons-material/Inventory2';
 import CloseIcon from '@mui/icons-material/Close';
-import GridViewIcon from '@mui/icons-material/GridView';
+import ViewCarouselIcon from '@mui/icons-material/ViewCarousel';
 import ViewListIcon from '@mui/icons-material/ViewList';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { projects, projectKinds, projectImageUrl, STATUS_NOTE } from '../../data/projects';
 import type { Project, ProjectLinkKey } from '../../data/projects';
 import SectionHeading from '../SectionHeading';
@@ -36,7 +48,26 @@ const LINK_ORDER: ProjectLinkKey[] = ['live', 'npm', 'paper', 'repo', 'demo'];
 const HAIRLINE = '1px solid rgba(230,241,255,0.10)';
 const MONO_SX = { fontFamily: FONT_MONO, fontSize: '0.72rem', letterSpacing: '0.04em', color: 'text.secondary' } as const;
 
-type View = 'grid' | 'list';
+type View = 'cards' | 'list';
+
+const FILMSTRIP_CARD_W = 'clamp(380px, 40vw, 500px)';
+const FILMSTRIP_ITEM = '[data-filmstrip-item]';
+const GLASS_STROKE = '1px solid rgba(255,255,255,0.14)';
+const PILL_SX = {
+  fontFamily: FONT_MONO,
+  fontSize: '0.8rem',
+  letterSpacing: '0.03em',
+  lineHeight: 1,
+  px: 1.25,
+  py: 0.75,
+  borderRadius: '999px',
+  backgroundColor: 'rgba(7,9,15,0.6)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+  border: GLASS_STROKE,
+  color: 'text.primary',
+  whiteSpace: 'nowrap',
+} as const;
 
 // ── Meta line: "ORG · YEAR" in mono, optional status note ──────────────────
 const Meta: React.FC<{ project: Project }> = ({ project }) => (
@@ -221,6 +252,393 @@ const Tile: React.FC<TileProps> = ({ project, onOpen, reducedMotion, index }) =>
   );
 };
 
+// ── Stage card (desktop filmstrip) ─────────────────────────────────────────
+// Glass card on a horizontal snap track. Everything visual is driven by the
+// card's position in the track: the centred card is lit (ambient glow from its
+// own screenshot, accent ring, full colour, pointer tilt) and neighbours turn
+// away CoverFlow-style, desaturate and dim.
+interface StageCardProps {
+  project: Project;
+  index: number;
+  total: number;
+  trackRef: React.RefObject<HTMLDivElement | null>;
+  onOpen: (p: Project) => void;
+  onCenter: (el: HTMLElement) => void;
+  reducedMotion: boolean;
+}
+
+const StageCard: React.FC<StageCardProps> = ({ project, index, total, trackRef, onOpen, onCenter, reducedMotion }) => {
+  const theme = useTheme();
+  const accent = theme.palette.primary.main;
+  const ref = useRef<HTMLDivElement>(null);
+  const img = projectImageUrl(project);
+  const live = project.links.live;
+
+  // layoutEffect: false — the track ref is attached after this child's layout effect would run
+  const { scrollXProgress } = useScroll({ container: trackRef, target: ref, axis: 'x', offset: ['start end', 'end start'], layoutEffect: false });
+  const active = useTransform(scrollXProgress, [0.3, 0.5, 0.7], [0, 1, 0]);
+  const scale = useTransform(active, [0, 1], [0.84, 1]);
+  const turn = useTransform(scrollXProgress, [0.2, 0.5, 0.8], reducedMotion ? [0, 0, 0] : [-18, 0, 18]);
+  const grayscale = useTransform(active, [0, 1], [0.75, 0]);
+  const brightness = useTransform(active, [0, 1], [0.5, 1]);
+  // Capped so light screenshots don't blow out into a white halo
+  const glowOpacity = useTransform(active, [0, 1], [0, 0.55]);
+  const filter = useMotionTemplate`grayscale(${grayscale}) brightness(${brightness})`;
+
+  const spring = { stiffness: 220, damping: 24, mass: 0.6 };
+  const tiltXRaw = useMotionValue(0);
+  const tiltYRaw = useMotionValue(0);
+  const tiltX = useSpring(tiltXRaw, spring);
+  const tiltY = useSpring(tiltYRaw, spring);
+  const rotateY = useTransform([turn, tiltY], ([t, y]: number[]) => t + y);
+  const lightX = useSpring(useMotionValue(50), spring);
+  const lightY = useSpring(useMotionValue(30), spring);
+  const sheen = useMotionTemplate`radial-gradient(520px circle at ${lightX}% ${lightY}%, rgba(255,255,255,0.16), rgba(255,255,255,0.03) 40%, transparent 62%)`;
+
+  const isCentred = () => Math.abs(scrollXProgress.get() - 0.5) < 0.08;
+  const activate = () => {
+    if (isCentred()) onOpen(project);
+    else if (ref.current) onCenter(ref.current);
+  };
+
+  return (
+    <Box
+      ref={ref}
+      data-filmstrip-item=""
+      role="group"
+      aria-roledescription="slide"
+      aria-label={`${index + 1} of ${total}`}
+      sx={{ flex: `0 0 ${FILMSTRIP_CARD_W}`, minWidth: 0, scrollSnapAlign: 'center', position: 'relative' }}
+    >
+      <motion.div
+        style={{ scale, rotateY, rotateX: tiltX, filter, transformPerspective: 1400, height: '100%', position: 'relative' }}
+      >
+        {/* Ambient light: the screenshot itself, blurred, behind the glass */}
+        <motion.div
+          aria-hidden="true"
+          style={{
+            opacity: glowOpacity,
+            position: 'absolute',
+            inset: '-6% -8%',
+            zIndex: 0,
+            borderRadius: 40,
+            filter: 'blur(48px) saturate(1.7) brightness(0.8)',
+            background: img
+              ? `url(${img}) center / cover no-repeat`
+              : `radial-gradient(60% 60% at 30% 30%, ${alpha(accent, 0.5)}, transparent 70%)`,
+            pointerEvents: 'none',
+          }}
+        />
+        {/* Accent ring, breathing while the card is centred */}
+        <motion.div aria-hidden="true" style={{ opacity: active, position: 'absolute', inset: 0, zIndex: 0, borderRadius: 20, pointerEvents: 'none' }}>
+          <motion.div
+            animate={reducedMotion ? undefined : { opacity: [0.55, 1, 0.55] }}
+            transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: 20,
+              boxShadow: `0 0 0 1px ${alpha(accent, 0.55)}, 0 0 60px ${alpha(accent, 0.22)}, 0 0 120px ${alpha(accent, 0.12)}`,
+            }}
+          />
+        </motion.div>
+
+        <Box
+          role="button"
+          tabIndex={0}
+          aria-label={`${project.title}: open details`}
+          onClick={activate}
+          onKeyDown={(e: React.KeyboardEvent) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
+          }}
+          onPointerMove={(e: React.PointerEvent<HTMLElement>) => {
+            if (reducedMotion || e.pointerType !== 'mouse' || !isCentred()) return;
+            const r = e.currentTarget.getBoundingClientRect();
+            const rx = (e.clientX - r.left) / r.width;
+            const ry = (e.clientY - r.top) / r.height;
+            tiltXRaw.set((0.5 - ry) * 9);
+            tiltYRaw.set((rx - 0.5) * 11);
+            lightX.set(rx * 100);
+            lightY.set(ry * 100);
+          }}
+          onPointerLeave={() => {
+            tiltXRaw.set(0);
+            tiltYRaw.set(0);
+            lightX.set(50);
+            lightY.set(30);
+          }}
+          sx={{
+            position: 'relative',
+            zIndex: 1,
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            borderRadius: '20px',
+            overflow: 'hidden',
+            cursor: 'pointer',
+            outline: 'none',
+            backgroundColor: 'rgba(11,15,24,0.78)',
+            backdropFilter: 'blur(22px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(22px) saturate(160%)',
+            border: GLASS_STROKE,
+            boxShadow: '0 1px 0 rgba(255,255,255,0.12) inset, 0 24px 60px rgba(0,0,0,0.45)',
+            transition: 'border-color 0.3s',
+            '&:hover': { borderColor: 'rgba(255,255,255,0.24)' },
+            '&:focus-visible': { boxShadow: `0 0 0 2px ${accent}, 0 24px 60px rgba(0,0,0,0.45)` },
+            '& .stage-img': { transition: reducedMotion ? 'none' : 'transform 0.7s cubic-bezier(0.2,0.7,0.2,1)' },
+            '&:hover .stage-img': { transform: reducedMotion ? 'none' : 'scale(1.04)' },
+          }}
+        >
+          {/* Specular sheen following the pointer */}
+          <motion.div aria-hidden="true" style={{ background: sheen, position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none', mixBlendMode: 'screen' }} />
+
+          <Box sx={{ position: 'relative', aspectRatio: '16 / 9', overflow: 'hidden', backgroundColor: '#0d1b33', borderBottom: GLASS_STROKE }}>
+            {img ? (
+              <Box
+                component="img"
+                className="stage-img"
+                src={img}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                width={project.image?.width}
+                height={project.image?.height}
+                sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: project.image?.position ?? 'top', display: 'block' }}
+              />
+            ) : (
+              <GeneratedCover project={project} />
+            )}
+            <Box aria-hidden="true" sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(7,9,15,0.55), transparent 45%)', pointerEvents: 'none' }} />
+            <Box sx={{ position: 'absolute', top: 14, left: 14, right: 14, display: 'flex', justifyContent: 'space-between', gap: 1, zIndex: 2 }}>
+              <Box sx={PILL_SX}>{project.org}</Box>
+              <Box sx={PILL_SX}>
+                {project.year}
+                {STATUS_NOTE[project.status] && (
+                  <Box component="span" sx={{ ml: 1, color: 'rgba(255,184,107,0.95)' }}>{STATUS_NOTE[project.status]}</Box>
+                )}
+              </Box>
+            </Box>
+          </Box>
+
+          <Box sx={{ p: { md: 2.5 }, pt: { md: 2 }, display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 2 }}>
+              <Typography
+                variant="h4"
+                component="h3"
+                sx={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: { md: '1.55rem', lg: '1.7rem' }, lineHeight: 1.15, m: 0, letterSpacing: '-0.01em' }}
+              >
+                {project.title}
+              </Typography>
+              {live && (
+                <Box
+                  component="a"
+                  href={live}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Visit ${project.title} (opens in new tab)`}
+                  onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                  sx={{ fontFamily: FONT_MONO, fontSize: '0.82rem', color: 'primary.main', textDecoration: 'none', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 0.5, '&:hover': { textDecoration: 'underline' } }}
+                >
+                  visit <OpenInNewIcon sx={{ fontSize: 14 }} />
+                </Box>
+              )}
+            </Box>
+            <Typography sx={{ color: 'text.primary', fontSize: '0.98rem', lineHeight: 1.45, m: 0 }}>{project.tagline}</Typography>
+            <Typography sx={{ color: 'text.secondary', fontSize: '0.88rem', lineHeight: 1.45, m: 0 }}>{project.role}</Typography>
+            <Box component="ul" sx={{ listStyle: 'none', m: 0, mt: 'auto', pt: 1.25, p: 0, display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+              {project.facts.slice(0, 3).map(f => (
+                <Box
+                  component="li"
+                  key={f}
+                  sx={{
+                    fontFamily: FONT_MONO,
+                    fontSize: '0.76rem',
+                    letterSpacing: '0.02em',
+                    px: 1.1,
+                    py: 0.5,
+                    borderRadius: '999px',
+                    color: 'primary.main',
+                    border: `1px solid ${alpha(accent, 0.35)}`,
+                    backgroundColor: alpha(accent, 0.07),
+                  }}
+                >
+                  {f}
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        </Box>
+      </motion.div>
+    </Box>
+  );
+};
+
+interface FilmstripProps {
+  items: Project[];
+  onOpen: (p: Project) => void;
+  onActiveChange: (p: Project | null) => void;
+  reducedMotion: boolean;
+}
+
+const Filmstrip: React.FC<FilmstripProps> = ({ items, onOpen, onActiveChange, reducedMotion }) => {
+  const theme = useTheme();
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ start: true, end: false });
+  const [activeIndex, setActiveIndex] = useState(0);
+  const { scrollXProgress: trackProgress } = useScroll({ container: trackRef, axis: 'x', layoutEffect: false });
+
+  const nearestIndex = useCallback(() => {
+    const t = trackRef.current;
+    if (!t) return 0;
+    const els = Array.from(t.querySelectorAll<HTMLElement>(FILMSTRIP_ITEM));
+    const mid = t.scrollLeft + t.clientWidth / 2;
+    let current = 0;
+    let best = Infinity;
+    els.forEach((el, i) => {
+      const d = Math.abs(el.offsetLeft + el.offsetWidth / 2 - mid);
+      if (d < best) { best = d; current = i; }
+    });
+    return current;
+  }, []);
+
+  const updateScroll = useCallback(() => {
+    const t = trackRef.current;
+    if (!t) return;
+    const start = t.scrollLeft <= 1;
+    const end = t.scrollLeft + t.clientWidth >= t.scrollWidth - 1;
+    setEdges(prev => (prev.start === start && prev.end === end ? prev : { start, end }));
+    setActiveIndex(nearestIndex());
+  }, [nearestIndex]);
+
+  useEffect(() => {
+    const t = trackRef.current;
+    if (!t) return;
+    updateScroll();
+    t.addEventListener('scroll', updateScroll, { passive: true });
+    const ro = new ResizeObserver(updateScroll);
+    ro.observe(t);
+    return () => {
+      t.removeEventListener('scroll', updateScroll);
+      ro.disconnect();
+    };
+  }, [updateScroll]);
+
+  useEffect(() => {
+    onActiveChange(items[activeIndex] ?? null);
+  }, [activeIndex, items, onActiveChange]);
+
+  const centerOn = useCallback(
+    (el: HTMLElement) => {
+      const t = trackRef.current;
+      if (!t) return;
+      t.scrollTo({
+        left: el.offsetLeft - (t.clientWidth - el.offsetWidth) / 2,
+        behavior: reducedMotion ? 'auto' : 'smooth',
+      });
+    },
+    [reducedMotion],
+  );
+
+  const step = (dir: 1 | -1) => {
+    const t = trackRef.current;
+    if (!t) return;
+    const els = Array.from(t.querySelectorAll<HTMLElement>(FILMSTRIP_ITEM));
+    if (!els.length) return;
+    centerOn(els[Math.min(els.length - 1, Math.max(0, nearestIndex() + dir))]);
+  };
+
+  const arrowSx = {
+    position: 'absolute',
+    top: '30%',
+    zIndex: 2,
+    width: 44,
+    height: 44,
+    color: 'text.primary',
+    backgroundColor: 'rgba(7,9,15,0.6)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+    border: GLASS_STROKE,
+    transition: 'opacity 0.2s, border-color 0.2s, color 0.2s',
+    '&:hover': { borderColor: 'primary.main', color: 'primary.main', backgroundColor: 'rgba(7,9,15,0.75)' },
+    '&.Mui-disabled': { opacity: 0 },
+  } as const;
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+
+  return (
+    <Box
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="Work"
+      sx={{ position: 'relative' }}
+      onKeyDown={(e: React.KeyboardEvent) => {
+        if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+        if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
+      }}
+      onFocus={(e: React.FocusEvent) => {
+        const target = e.target as HTMLElement;
+        const item = target.closest<HTMLElement>(FILMSTRIP_ITEM);
+        if (item && target.matches(':focus-visible')) centerOn(item);
+      }}
+    >
+      <Box
+        ref={trackRef}
+        sx={{
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 3,
+          px: `calc(50% - (${FILMSTRIP_CARD_W}) / 2)`,
+          py: 4,
+          my: -2.5,
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          overscrollBehaviorX: 'contain',
+          scrollSnapType: 'x mandatory',
+          scrollbarWidth: 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
+          maskImage: 'linear-gradient(to right, transparent, #000 5%, #000 95%, transparent)',
+          WebkitMaskImage: 'linear-gradient(to right, transparent, #000 5%, #000 95%, transparent)',
+        }}
+      >
+        {items.map((p, i) => (
+          <StageCard
+            key={p.slug}
+            project={p}
+            index={i}
+            total={items.length}
+            trackRef={trackRef}
+            onOpen={onOpen}
+            onCenter={centerOn}
+            reducedMotion={reducedMotion}
+          />
+        ))}
+      </Box>
+      <IconButton aria-label="Previous project" disabled={edges.start} onClick={() => step(-1)} sx={{ ...arrowSx, left: 8 }}>
+        <ChevronLeftIcon />
+      </IconButton>
+      <IconButton aria-label="Next project" disabled={edges.end} onClick={() => step(1)} sx={{ ...arrowSx, right: 8 }}>
+        <ChevronRightIcon />
+      </IconButton>
+
+      {/* Counter + progress */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, mt: 1.5, fontFamily: FONT_MONO, fontSize: '0.82rem', letterSpacing: '0.06em', color: 'text.secondary' }}>
+        <Box aria-live="polite" sx={{ whiteSpace: 'nowrap', minWidth: 72 }}>
+          <Box component="span" sx={{ color: 'text.primary' }}>{pad(activeIndex + 1)}</Box>
+          {' / '}
+          {pad(items.length)}
+        </Box>
+        <Box aria-hidden="true" sx={{ flex: 1, height: 2, borderRadius: 1, backgroundColor: 'rgba(230,241,255,0.12)', overflow: 'hidden' }}>
+          <motion.div style={{ scaleX: trackProgress, transformOrigin: 'left', height: '100%', backgroundColor: theme.palette.primary.main }} />
+        </Box>
+        <Box sx={{ whiteSpace: 'nowrap', color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 260 }}>
+          {items[activeIndex]?.title}
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+
 // ── List row ───────────────────────────────────────────────────────────────
 const Row: React.FC<{ project: Project; onOpen: (p: Project) => void }> = ({ project, onOpen }) => (
   <Box
@@ -284,10 +702,13 @@ const Row: React.FC<{ project: Project; onOpen: (p: Project) => void }> = ({ pro
 // ── Section ────────────────────────────────────────────────────────────────
 const ProjectsSection: React.FC = () => {
   const [selected, setSelected] = useState<Project | null>(null);
-  const [view, setView] = useState<View>('grid');
+  const [view, setView] = useState<View>('cards');
   const [kind, setKind] = useState<string | null>(null);
   const isTouch = useMediaQuery('(hover: none)');
+  const isDesktop = useMediaQuery('(min-width:900px)', { noSsr: true });
   const reducedMotion = !!useReducedMotion();
+  const [stageProject, setStageProject] = useState<Project | null>(null);
+  const washImg = isDesktop && view === 'cards' && stageProject ? projectImageUrl(stageProject) : null;
 
   const visible = useMemo(
     () => (kind ? projects.filter(p => p.kind[0] === kind) : projects),
@@ -302,17 +723,46 @@ const ProjectsSection: React.FC = () => {
       aria-labelledby="projects-heading"
       sx={{
         minHeight: { xs: 'auto', md: '100vh' },
-        py: { xs: 8, md: 10 },
+        py: { xs: 8, md: 7 },
         position: 'relative',
+        overflow: 'hidden',
         scrollSnapAlign: { xs: 'none', md: 'start' },
         scrollSnapStop: { xs: 'none', md: 'always' },
       }}
     >
-      <Container maxWidth="lg">
-        <SectionHeading id="projects-heading" number="03." title="Work" mb={{ xs: 2, md: 2.5 }} />
+      {/* Section wash: the centred card's screenshot, blurred into a colour field */}
+      <AnimatePresence>
+        {washImg && (
+          <motion.img
+            key={washImg}
+            src={washImg}
+            alt=""
+            aria-hidden="true"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.22 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: reducedMotion ? 0 : 1.1, ease: 'easeOut' }}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              transform: 'scale(1.25)',
+              filter: 'blur(90px) saturate(1.5) brightness(0.7)',
+              maskImage: 'linear-gradient(to bottom, transparent, #000 25%, #000 75%, transparent)',
+              WebkitMaskImage: 'linear-gradient(to bottom, transparent, #000 25%, #000 75%, transparent)',
+              pointerEvents: 'none',
+              zIndex: 0,
+            }}
+          />
+        )}
+      </AnimatePresence>
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
+        <SectionHeading id="projects-heading" number="03." title="Work" mb={{ xs: 2, md: 2 }} />
 
         {/* Intro */}
-        <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 620, m: 0, mb: { xs: 2.5, md: 3 } }}>
+        <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 620, m: 0, mb: { xs: 2.5, md: 2 } }}>
           What I have built, run or published, and what my part was. Websites are the tools, not the point.
         </Typography>
 
@@ -324,7 +774,7 @@ const ProjectsSection: React.FC = () => {
             justifyContent: 'space-between',
             gap: 2,
             pb: 2,
-            mb: { xs: 3, md: 4 },
+            mb: { xs: 3, md: 2.5 },
             borderBottom: HAIRLINE,
           }}
         >
@@ -361,7 +811,7 @@ const ProjectsSection: React.FC = () => {
           </Box>
 
           <Box role="group" aria-label="View" sx={{ display: 'flex', border: HAIRLINE, borderRadius: '999px', p: 0.25, flexShrink: 0 }}>
-            {(['grid', 'list'] as View[]).map(v => (
+            {(['cards', 'list'] as View[]).map(v => (
               <IconButton
                 key={v}
                 size="small"
@@ -376,33 +826,30 @@ const ProjectsSection: React.FC = () => {
                   height: 30,
                 }}
               >
-                {v === 'grid' ? <GridViewIcon sx={{ fontSize: 16 }} /> : <ViewListIcon sx={{ fontSize: 18 }} />}
+                {v === 'cards' ? <ViewCarouselIcon sx={{ fontSize: 18 }} /> : <ViewListIcon sx={{ fontSize: 18 }} />}
               </IconButton>
             ))}
           </Box>
         </Box>
 
         <AnimatePresence mode="wait" initial={false}>
-          {view === 'grid' ? (
+          {view === 'cards' ? (
             <motion.div
-              key={`grid-${kind ?? 'all'}`}
+              key={`cards-${kind ?? 'all'}-${isDesktop ? 'strip' : 'stack'}`}
               initial={reducedMotion ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' },
-                  columnGap: { md: 5 },
-                  rowGap: { xs: 5, md: 6 },
-                }}
-              >
-                {visible.map((p, i) => (
-                  <Tile key={p.slug} project={p} index={i} onOpen={setSelected} reducedMotion={reducedMotion} />
-                ))}
-              </Box>
+              {isDesktop ? (
+                <Filmstrip items={visible} onOpen={setSelected} onActiveChange={setStageProject} reducedMotion={reducedMotion} />
+              ) : (
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', rowGap: 5 }}>
+                  {visible.map((p, i) => (
+                    <Tile key={p.slug} project={p} index={i} onOpen={setSelected} reducedMotion={reducedMotion} />
+                  ))}
+                </Box>
+              )}
             </motion.div>
           ) : (
             <motion.div
