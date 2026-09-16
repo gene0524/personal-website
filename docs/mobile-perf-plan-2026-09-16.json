@@ -1,0 +1,84 @@
+{
+  "meta": {
+    "topic": "Mobile (and desktop) performance regression from this session's hero scene + Work filmstrip work - Gene asked whether it's laggy and wants a plan, explicitly NOT to implement yet ('先不急著改')",
+    "created": "2026-09-16",
+    "method": "npm run build + vite preview (production build, port 4173) + npx lighthouse@12.8.2 --preset=perf, throttling-method=simulate, both mobile and desktop form factors. Compared against the pre-session baseline already recorded in site-audit-2026-09-15.json.measurements.lighthouse.",
+    "statusLegend": "todo | in-progress | done | wontfix",
+    "relatedDocs": ["site-audit-2026-09-15.json", "hero-scene-plan-2026-09-16.json"]
+  },
+  "measurements": {
+    "before_2026-09-15": { "mobile": { "performance": 81, "fcp": "3.1s", "lcp": "3.3s", "tbt": "250ms", "tti": "3.6s", "speedIndex": "3.1s" }, "desktop": { "performance": 99, "fcp": "0.7s", "lcp": "0.8s", "tbt": "0ms" } },
+    "after_2026-09-16": {
+      "mobile": { "performance": 72, "fcp": "2.8s", "lcp": "5.2s", "tbt": "220ms", "tti": "6.7s", "speedIndex": "3.8s", "maxPotentialFID": "280ms" },
+      "desktop": { "performance": 57, "fcp": "2.9s", "lcp": "5.1s", "tbt": "140ms", "tti": "6.5s" },
+      "caveat": "Not a perfectly apples-to-apples run (throttling method/version may differ slightly from the original audit's Lighthouse 13 run), but the absolute numbers and the diagnostic breakdown below are real, from this build, and tell a clear story on their own regardless of the exact delta vs the old baseline."
+    },
+    "verdict": "Confirmed regression, and it is NOT mobile-specific - desktop dropped from 99 to 57, proportionally worse than mobile's 81->72. This is a genuine amount of main-thread work, not just mobile CPU throttling exposing something that was always marginal.",
+    "diagnostics": {
+      "lcpElement": "Changed from the portrait image (pre-session) to the tagline paragraph ('I build the tooling, backend services...') - the LARGEST content on the page now takes 5.1-5.2s to paint because something is delaying even plain text rendering, not because of image weight.",
+      "longTasksBreakdown": "Script Evaluation 1430ms, Other 784ms, Style & Layout 311ms, Rendering 193ms (mainthread-work-breakdown audit, mobile run) - script evaluation alone is more than double every other category combined.",
+      "renderBlocking": "Down to a trivial 1.7KB inline CSS chunk (153ms) - Google Fonts is NO LONGER the render-blocking culprit it was in the original audit, so that finding is stale/already fixed and not the current bottleneck.",
+      "conclusion": "The ~1.4s of script-evaluation long-task time lines up exactly with this session's addition: OrbitalSystem's entire WebGL scene setup (renderer creation, 6 orbit-line geometries at 256 segments each, 6 sphere meshes at 40x40 segments with MeshStandardMaterial, texture load + canvas masking for the portrait, shader compilation for the custom star/orbit shaders) runs as ONE synchronous block inside a single useEffect. That block is bulldozing straight through the main thread the moment it fires (via requestIdleCallback after first paint), and text painting - which should be nearly free - gets queued behind it."
+    }
+  },
+  "plan": [
+    {
+      "priority": 1,
+      "id": "P1",
+      "name": "Break up OrbitalSystem's synchronous setup so it stops blocking the main thread",
+      "why": "This is the one change most directly responsible for the LCP/TTI regression per the diagnostics above - not a guess, the long-task breakdown points straight at script evaluation timed right after the idle-callback trigger.",
+      "how": "Split the current single useEffect into staged work: renderer + camera + lights first (cheap), THEN yield a frame (requestAnimationFrame or a 0ms setTimeout) before building the 6 orbit geometries, THEN yield again before the star field, THEN the portrait texture load (already async via TextureLoader's callback, that part is fine). Each yield lets the browser paint/respond to input between chunks instead of one uninterrupted block.",
+      "effort": "~0.5 day",
+      "status": "done",
+      "result": {
+        "implementation": "Split the single synchronous useEffect into: sync Stage A (renderer/camera/scene/fog/root groups/corona/portrait sprite/lights), then an async IIFE with a yieldToMain() (requestIdleCallback w/ 50ms timeout fallback, falls back to setTimeout(0)) between Stage B (orbit lines + planets) and Stage C (star field). renderer.compile(scene, camera) called after each stage. Observer/listener wiring + start() deferred until all stages complete. Cleanup handles both full-teardown and mid-setup-cancellation via cancelled/wired flags.",
+        "visualRegression": "None - screenshots before/after are pixel-identical, confirmed by Gene.",
+        "measurementMethod": "npm run build + vite preview (port 4173) + lighthouse@12.8.2, mobile form factor. IMPORTANT: switched to --throttling-method=devtools (real CPU/network throttling during recording) instead of the default simulate (post-hoc mathematical estimate) because simulate showed no change at all (0.72->0.70, likely too coarse to register short real-world yields as paint opportunities). devtools is the faithful signal for a main-thread-yielding fix. Same exact build isolated by git stash push -- src/components/OrbitalSystem.tsx for the pre-P1 baseline, git stash pop to restore.",
+        "before_devtools": { "performance": 0.68, "fcp": "3.6s", "lcp": "4.6s", "tbt": "240ms", "speedIndex": "5.5s", "tti": "9.4s", "scriptEvaluationMs": 3184.2 },
+        "after_devtools": { "performance": 0.73, "fcp": "3.4s", "lcp": "4.5s", "tbt": "80ms", "speedIndex": "5.4s", "tti": "9.4s", "scriptEvaluationMs": 2950.2 },
+        "verdict": "Real, confirmed improvement. TBT (the metric that best tracks perceived jank/input-responsiveness) dropped 240ms->80ms, a 67% reduction. Perf score 0.68->0.73. Script Evaluation long-task time down ~234ms. LCP/FCP/Speed Index only marginally better since P1 doesn't reduce total work, just unblocks the thread during it. TTI unchanged - likely gated by other costs (React/MUI mount, below-fold section code) not yet touched, which is exactly what P3 targets."
+      }
+    },
+    {
+      "priority": 2,
+      "id": "P2",
+      "name": "Cut the WebGL scene's actual render cost on mobile",
+      "why": "Even once setup is non-blocking, the STEADY-STATE per-frame cost (what Gene calls 卡頓/stutter while scrolling or idling on the hero) is still driven by these settings.",
+      "how": "(a) antialias:true contradicts powerPreference:'low-power' and is one of the more expensive WebGL flags on mobile GPUs - disable it below the 900px/isSmall breakpoint, the scene is already stylised/blurred so the visual loss is minimal. (b) Cap devicePixelRatio at 1.5 instead of 2 on small hosts. (c) Drop sphere segments 40x40 -> ~20x20 and orbit line segments 256 -> ~96 on mobile via the existing isSmall check - both already have a mobile branch for particle/star counts, this extends the same pattern.",
+      "effort": "~0.5 day",
+      "status": "todo"
+    },
+    {
+      "priority": 3,
+      "id": "P3",
+      "name": "Code-split the below-the-fold sections the same way TravelSection already is",
+      "why": "The main index chunk is 210KB gzip and, per the original audit, already had an 'unused-javascript ~81KiB' finding before this session added more section code (About's flip cards, the Work filmstrip's StageCard/Filmstrip logic, the hero button/typewriter logic). Everything below the fold currently ships in the same eagerly-loaded bundle as the hero.",
+      "how": "React.lazy() + the same IntersectionObserver-gated placeholder pattern already used for DeferredTravelSection, applied to ExperienceSection, ProjectsSection and ContactSection (About probably stays eager since it's usually the first scroll target). Each becomes its own chunk, loaded just before it scrolls into view.",
+      "effort": "~1 day (mostly placeholder/height-reservation work to avoid layout shift, CLS is currently a perfect 0 and must stay that way)",
+      "status": "todo"
+    },
+    {
+      "priority": 4,
+      "id": "P4",
+      "name": "Reconsider running two independent animation loops in the hero at once",
+      "why": "ParticleNetwork (2D canvas, O(n^2) pairwise distance checks for repulsion + connections every frame) and OrbitalSystem (WebGL) both run continuously whenever the hero is in view. Each is individually reasonable-ish now (particle count is density-scaled, WebGL work will shrink after P1/P2), but two independent per-frame loops is still double the scheduling/context-switch overhead of one.",
+      "how": "Lowest-effort option: nothing structural, just confirm after P1-P3 land whether steady-state frame time is still a problem before touching this - may not be worth the complexity of merging them. If it still is, consider drawing the starfield INTO the WebGL canvas as additional Points (removes the 2D canvas + its own rAF loop entirely) instead of a separate DOM canvas.",
+      "effort": "~1 day IF pursued; recommend measuring first, this may turn out unnecessary",
+      "status": "todo"
+    },
+    {
+      "priority": 5,
+      "id": "P5",
+      "name": "Adaptive fallback for genuinely low-end or data-saver devices",
+      "why": "Gene's point about 'strong personal sites don't feel laggy even with rich visuals' - the sites that pull this off usually don't run a full 3D scene unconditionally for every visitor, they gate it. Right now every mobile visitor gets the same WebGL scene regardless of device class or a saveData preference.",
+      "how": "Check navigator.connection?.saveData and/or navigator.hardwareConcurrency / deviceMemory (where available) once, at mount; below a threshold, skip OrbitalSystem entirely and keep the plain photo + dashed ring (the pre-scene hero), which is still a perfectly good fallback since it's what shipped before this session.",
+      "effort": "~0.5 day",
+      "status": "todo"
+    }
+  ],
+  "openQuestions": [
+    "Priority order: P1 (stop the main-thread block) is the clear highest-value fix since it explains the actual regression measured; is Gene fine with P2-P5 being sequenced after, or is there a specific one he wants first?",
+    "Is a graceful low-end fallback (P5) worth the added code path complexity, or is 'everyone gets the WebGL scene' an acceptable tradeoff once P1/P2 land and the numbers are re-measured?",
+    "Should Work section's StageCard filmstrip (11 cards, each with live useScroll + several motion values, backdrop-filter blur) get a similar look now that Work isn't part of this measurement pass - re-run Lighthouse scrolled/interacted, not just initial load, to see if it's a second hot spot?"
+  ]
+}

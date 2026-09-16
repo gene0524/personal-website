@@ -95,6 +95,22 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
     const canvas = canvasRef.current;
     if (!host || !canvas) return;
 
+    // The whole scene used to get built in one synchronous block - Lighthouse
+    // traced ~1.4s of "Script Evaluation" to exactly this moment, delaying
+    // even plain text paint elsewhere on the page (LCP 3.3s -> 5.2s). Setup is
+    // now staged across a few macrotask yields (cheap scene first, then
+    // orbits, then stars), with renderer.compile() called after each stage so
+    // shader compilation - the actual expensive part, normally deferred to
+    // the first render() call - gets spread out too instead of happening as
+    // one lump when the scene finally renders.
+    let cancelled = false;
+    const yieldToMain = () =>
+      new Promise<void>(resolve => {
+        const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
+        if (ric) ric(() => resolve(), { timeout: 50 });
+        else setTimeout(resolve, 0);
+      });
+
     const FOCUS_DISTANCE = focusDistance;
     const FOV = fov;
     const ELEVATION = THREE.MathUtils.degToRad(elevationDeg);
@@ -184,77 +200,14 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
     root.add(sun);
     scene.add(new THREE.AmbientLight('#8fb3ff', 0.6));
 
-    // Orbits + planets
+    // Orbits + planets and the star field are built in later stages (below);
+    // these are populated then, `render`/`tick` close over the `let`s so an
+    // empty array here just means "nothing to draw yet" for the one or two
+    // frames before that happens - never actually visible since the host div
+    // stays opacity:0 until onReady fires anyway.
     const tmp = new THREE.Vector3();
-    const lineColor = accentColor.clone().lerp(new THREE.Color('#ffffff'), 0.55);
-    const bodies = ORBITS.map(o => {
-      const a = o.a * orbitScale;
-      const size = o.size * orbitScale;
-      const frame = new THREE.Group();
-      frame.rotation.y = THREE.MathUtils.degToRad(o.peri);
-      frame.rotation.x = THREE.MathUtils.degToRad(o.inc);
-      discRoot.add(frame);
-
-      const segments = 256;
-      const pts: number[] = [];
-      for (let s = 0; s <= segments; s++) {
-        orbitPoint(a, o.e, (s / segments) * Math.PI * 2, tmp);
-        pts.push(tmp.x, tmp.y, tmp.z);
-      }
-      const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-      const lineMaterial = new THREE.LineBasicMaterial({ color: lineColor, transparent: true, opacity: 0.3, fog: true });
-      frame.add(new THREE.Line(geometry, lineMaterial));
-      disposables.push(geometry, lineMaterial);
-
-      const planetGeometry = new THREE.SphereGeometry(size, 40, 40);
-      const planetMaterial = new THREE.MeshStandardMaterial({ color: o.color, roughness: 0.7, metalness: 0, emissive: new THREE.Color(o.color), emissiveIntensity: 0.14, fog: true });
-      const planet = new THREE.Mesh(planetGeometry, planetMaterial);
-      frame.add(planet);
-      disposables.push(planetGeometry, planetMaterial);
-
-      if (o.ring) {
-        const ringGeometry = new THREE.RingGeometry(size * 1.45, size * 2.3, 96);
-        const ringMaterial = new THREE.MeshStandardMaterial({ color: '#f3d7a8', roughness: 0.9, transparent: true, opacity: 0.55, side: THREE.DoubleSide, fog: true });
-        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-        ring.rotation.x = THREE.MathUtils.degToRad(72);
-        ring.rotation.y = THREE.MathUtils.degToRad(-18);
-        planet.add(ring);
-        disposables.push(ringGeometry, ringMaterial);
-      }
-
-      // Exaggerated past real Kepler's-3rd-law scaling (a^-1.5) so the
-      // innermost/outermost planets read as obviously different speeds, not a
-      // subtle ratio you'd need to time with a stopwatch to notice.
-      return { a, e: o.e, planet, theta: o.phase as number, speed: speedCoeff * Math.pow(a, -speedExp) };
-    });
-
-    // Star field, far behind the plane
-    const starCount = 320;
-    const starPos: number[] = [];
-    const starSize: number[] = [];
-    const starSeed: number[] = [];
-    let seed = 5;
-    const rand = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-    for (let i = 0; i < starCount; i++) {
-      starPos.push((rand() - 0.5) * 40, (rand() - 0.2) * 22, -6 - rand() * 14);
-      starSize.push(1.2 + rand() * 2.4);
-      starSeed.push(rand());
-    }
-    const starGeometry = new THREE.BufferGeometry();
-    starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
-    starGeometry.setAttribute('aSize', new THREE.Float32BufferAttribute(starSize, 1));
-    starGeometry.setAttribute('aSeed', new THREE.Float32BufferAttribute(starSeed, 1));
-    const starMaterial = new THREE.ShaderMaterial({
-      uniforms: { uMap: { value: dotTexture }, uOpacity: { value: 0.55 }, uTime: { value: 0 }, uPixelRatio: { value: pixelRatio } },
-      vertexShader: STAR_VERT,
-      fragmentShader: STAR_FRAG,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-    scene.add(new THREE.Points(starGeometry, starMaterial));
-    disposables.push(starGeometry, starMaterial);
+    let bodies: { a: number; e: number; planet: THREE.Mesh; theta: number; speed: number }[] = [];
+    let starMaterial: THREE.ShaderMaterial | null = null;
 
     const halfHeight = FOCUS_DISTANCE * Math.tan((FOV / 2) * (Math.PI / 180));
     const syncAnchor = () => {
@@ -301,7 +254,7 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
       parallaxY += (targetY - parallaxY) * 0.04;
       root.rotation.x = parallaxX;
       root.rotation.y = parallaxY;
-      starMaterial.uniforms.uTime.value = time;
+      if (starMaterial) starMaterial.uniforms.uTime.value = time;
       bodies.forEach(b => {
         orbitPoint(b.a, b.e, b.theta, tmp);
         b.planet.position.copy(tmp);
@@ -349,25 +302,126 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
     };
     const onVisibility = () => (document.hidden ? stop() : start());
 
-    const ro = new ResizeObserver(resize);
-    const io = new IntersectionObserver(([entry]) => {
-      visible = entry?.isIntersecting ?? true;
-      if (visible) start(); else stop();
-    });
-    ro.observe(host);
-    io.observe(host);
-    window.addEventListener('pointermove', onPointerMove, { passive: true });
-    document.addEventListener('visibilitychange', onVisibility);
-    resize();
-    start();
-    host.style.opacity = '1';
+    let wired = false;
+    let ro: ResizeObserver | null = null;
+    let io: IntersectionObserver | null = null;
+
+    // renderer.compile() forces shader compilation for whatever materials
+    // exist in the scene right now, instead of letting it happen implicitly
+    // (and all at once) on the first renderer.render() call - called again
+    // after each stage below adds more materials, so that cost gets spread
+    // across yields too, not just the JS object construction.
+    renderer.compile(scene, camera);
+
+    (async () => {
+      await yieldToMain();
+      if (cancelled) return;
+
+      // Stage: orbits + planets
+      const lineColor = accentColor.clone().lerp(new THREE.Color('#ffffff'), 0.55);
+      bodies = ORBITS.map(o => {
+        const a = o.a * orbitScale;
+        const size = o.size * orbitScale;
+        const frame = new THREE.Group();
+        frame.rotation.y = THREE.MathUtils.degToRad(o.peri);
+        frame.rotation.x = THREE.MathUtils.degToRad(o.inc);
+        discRoot.add(frame);
+
+        const segments = 256;
+        const pts: number[] = [];
+        for (let s = 0; s <= segments; s++) {
+          orbitPoint(a, o.e, (s / segments) * Math.PI * 2, tmp);
+          pts.push(tmp.x, tmp.y, tmp.z);
+        }
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+        const lineMaterial = new THREE.LineBasicMaterial({ color: lineColor, transparent: true, opacity: 0.3, fog: true });
+        frame.add(new THREE.Line(geometry, lineMaterial));
+        disposables.push(geometry, lineMaterial);
+
+        const planetGeometry = new THREE.SphereGeometry(size, 40, 40);
+        const planetMaterial = new THREE.MeshStandardMaterial({ color: o.color, roughness: 0.7, metalness: 0, emissive: new THREE.Color(o.color), emissiveIntensity: 0.14, fog: true });
+        const planet = new THREE.Mesh(planetGeometry, planetMaterial);
+        frame.add(planet);
+        disposables.push(planetGeometry, planetMaterial);
+
+        if (o.ring) {
+          const ringGeometry = new THREE.RingGeometry(size * 1.45, size * 2.3, 96);
+          const ringMaterial = new THREE.MeshStandardMaterial({ color: '#f3d7a8', roughness: 0.9, transparent: true, opacity: 0.55, side: THREE.DoubleSide, fog: true });
+          const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+          ring.rotation.x = THREE.MathUtils.degToRad(72);
+          ring.rotation.y = THREE.MathUtils.degToRad(-18);
+          planet.add(ring);
+          disposables.push(ringGeometry, ringMaterial);
+        }
+
+        // Exaggerated past real Kepler's-3rd-law scaling (a^-1.5) so the
+        // innermost/outermost planets read as obviously different speeds, not a
+        // subtle ratio you'd need to time with a stopwatch to notice.
+        return { a, e: o.e, planet, theta: o.phase as number, speed: speedCoeff * Math.pow(a, -speedExp) };
+      });
+      if (cancelled) return;
+      renderer.compile(scene, camera);
+
+      await yieldToMain();
+      if (cancelled) return;
+
+      // Stage: star field, far behind the plane
+      const starCount = 320;
+      const starPos: number[] = [];
+      const starSize: number[] = [];
+      const starSeed: number[] = [];
+      let seed = 5;
+      const rand = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+      for (let i = 0; i < starCount; i++) {
+        starPos.push((rand() - 0.5) * 40, (rand() - 0.2) * 22, -6 - rand() * 14);
+        starSize.push(1.2 + rand() * 2.4);
+        starSeed.push(rand());
+      }
+      const starGeometry = new THREE.BufferGeometry();
+      starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+      starGeometry.setAttribute('aSize', new THREE.Float32BufferAttribute(starSize, 1));
+      starGeometry.setAttribute('aSeed', new THREE.Float32BufferAttribute(starSeed, 1));
+      starMaterial = new THREE.ShaderMaterial({
+        uniforms: { uMap: { value: dotTexture }, uOpacity: { value: 0.55 }, uTime: { value: 0 }, uPixelRatio: { value: pixelRatio } },
+        vertexShader: STAR_VERT,
+        fragmentShader: STAR_FRAG,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+      scene.add(new THREE.Points(starGeometry, starMaterial));
+      disposables.push(starGeometry, starMaterial);
+      if (cancelled) return;
+      renderer.compile(scene, camera);
+
+      // Wire up observers/listeners and actually start rendering - only now,
+      // with everything built and pre-compiled, is the first real render()
+      // call cheap.
+      ro = new ResizeObserver(resize);
+      io = new IntersectionObserver(([entry]) => {
+        visible = entry?.isIntersecting ?? true;
+        if (visible) start(); else stop();
+      });
+      ro.observe(host);
+      io.observe(host);
+      window.addEventListener('pointermove', onPointerMove, { passive: true });
+      document.addEventListener('visibilitychange', onVisibility);
+      wired = true;
+      resize();
+      start();
+      host.style.opacity = '1';
+    })();
 
     return () => {
+      cancelled = true;
       stop();
-      ro.disconnect();
-      io.disconnect();
-      window.removeEventListener('pointermove', onPointerMove);
-      document.removeEventListener('visibilitychange', onVisibility);
+      if (wired) {
+        ro?.disconnect();
+        io?.disconnect();
+        window.removeEventListener('pointermove', onPointerMove);
+        document.removeEventListener('visibilitychange', onVisibility);
+      }
       disposables.forEach(d => d.dispose());
       renderer.dispose();
     };
