@@ -98,6 +98,53 @@ const PARTICLE_FRAG = /* glsl */ `
     gl_FragColor = vec4(1.0, 1.0, 1.0, a * mix(0.55, 0.95, vBoost));
   }
 `;
+// A second, larger, blue-tinted, low-opacity layer sharing the same
+// geometry/positions as the white core points above - the original 2D
+// canvas version drew this as a separate glowSprite blit behind each
+// particle's solid core; collapsing both into one point sprite (the first
+// cut of this port) lost that halo. Additive blending means draw order
+// between this and the core layer doesn't matter for the final colour.
+const PARTICLE_GLOW_VERT = /* glsl */ `
+  attribute float aRadius;
+  attribute float aBoost;
+  uniform float uPixelRatio;
+  varying float vBoost;
+  void main() {
+    vBoost = aBoost;
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    gl_PointSize = aRadius * (7.0 + aBoost * 3.0) * uPixelRatio;
+    gl_Position = projectionMatrix * mv;
+  }
+`;
+const PARTICLE_GLOW_FRAG = /* glsl */ `
+  uniform sampler2D uMap;
+  varying float vBoost;
+  void main() {
+    float a = texture2D(uMap, gl_PointCoord).a;
+    gl_FragColor = vec4(0.4, 0.7, 1.0, a * mix(0.16, 0.4, vBoost));
+  }
+`;
+// Connection lines used a flat, uniform-opacity LineBasicMaterial that read
+// as visually identical to the orbit ellipses (same thin pale strokes) -
+// Gene asked for these to look distinct. Per-vertex alpha (fading toward
+// CONNECT_DIST, like the original 2D version's per-connection alpha) gives
+// the network a soft variable "web" texture instead of solid uniform arcs,
+// and a distinctly cooler/more saturated blue keeps the hue apart from the
+// orbit lines' accent-tinted near-white.
+const PARTICLE_LINE_VERT = /* glsl */ `
+  attribute float aAlpha;
+  varying float vAlpha;
+  void main() {
+    vAlpha = aAlpha;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+const PARTICLE_LINE_FRAG = /* glsl */ `
+  varying float vAlpha;
+  void main() {
+    gl_FragColor = vec4(0.42, 0.72, 1.0, vAlpha);
+  }
+`;
 
 const orbitPoint = (a: number, e: number, theta: number, out: THREE.Vector3) => {
   const r = (a * (1 - e * e)) / (1 + e * Math.cos(theta));
@@ -443,6 +490,7 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
       particlePoints.geometry.setDrawRange(0, particles.length);
 
       const linePosAttr = particleLines.geometry.attributes.position as THREE.BufferAttribute;
+      const lineAlphaAttr = particleLines.geometry.attributes.aAlpha as THREE.BufferAttribute;
       let segCount = 0;
       for (let i = 0; i < particles.length && segCount < MAX_LINE_SEGMENTS; i++) {
         for (let j = i + 1; j < particles.length && segCount < MAX_LINE_SEGMENTS; j++) {
@@ -454,11 +502,15 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
             const [bx, by] = toPlane(particles[j].x, particles[j].y);
             linePosAttr.setXYZ(segCount * 2, ax, ay, 0);
             linePosAttr.setXYZ(segCount * 2 + 1, bx, by, 0);
+            const alpha = (1 - dist / CONNECT_DIST) * 0.5;
+            lineAlphaAttr.setX(segCount * 2, alpha);
+            lineAlphaAttr.setX(segCount * 2 + 1, alpha);
             segCount++;
           }
         }
       }
       linePosAttr.needsUpdate = true;
+      lineAlphaAttr.needsUpdate = true;
       particleLines.geometry.setDrawRange(0, segCount * 2);
     };
 
@@ -698,14 +750,33 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
           depthTest: false,
           blending: THREE.AdditiveBlending,
         });
+        const particleGlowMaterial = new THREE.ShaderMaterial({
+          uniforms: { uMap: { value: dotTexture }, uPixelRatio: { value: pixelRatio } },
+          vertexShader: PARTICLE_GLOW_VERT,
+          fragmentShader: PARTICLE_GLOW_FRAG,
+          transparent: true,
+          depthWrite: false,
+          depthTest: false,
+          blending: THREE.AdditiveBlending,
+        });
+        particleGroup.add(new THREE.Points(particleGeometry, particleGlowMaterial));
+        disposables.push(particleGlowMaterial);
+
         particlePoints = new THREE.Points(particleGeometry, particleMaterial);
         particleGroup.add(particlePoints);
         disposables.push(particleGeometry, particleMaterial);
 
         const lineGeometry = new THREE.BufferGeometry();
         lineGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MAX_LINE_SEGMENTS * 6), 3));
+        lineGeometry.setAttribute('aAlpha', new THREE.BufferAttribute(new Float32Array(MAX_LINE_SEGMENTS * 2), 1));
         lineGeometry.setDrawRange(0, 0);
-        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xa0d2ff, transparent: true, opacity: 0.3, depthWrite: false });
+        const lineMaterial = new THREE.ShaderMaterial({
+          vertexShader: PARTICLE_LINE_VERT,
+          fragmentShader: PARTICLE_LINE_FRAG,
+          transparent: true,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        });
         particleLines = new THREE.LineSegments(lineGeometry, lineMaterial);
         particleGroup.add(particleLines);
         disposables.push(lineGeometry, lineMaterial);
