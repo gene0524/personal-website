@@ -1,8 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   Box, Typography, Container, Grid, Paper,
+  Dialog, DialogContent, IconButton,
   useTheme, useMediaQuery,
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { motion, AnimatePresence } from 'framer-motion';
 import { experiences } from '../../data/experience';
 import SectionHeading from '../SectionHeading';
@@ -11,15 +13,16 @@ const ExperienceSection: React.FC = () => {
   const [activeStep, setActiveStep] = useState(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  // Mobile: the detail panel sits after the whole row list, so tapping a
-  // row near the top can leave its description well off the bottom of the
-  // screen. scrollIntoView({block:'nearest'}) only moves the viewport the
-  // minimum amount needed to reveal the panel (no-op if it's already
-  // visible) - cheap native smooth scroll, not a layout reflow.
-  const panelRef = useRef<HTMLDivElement>(null);
+  // Mobile: a scroll-into-view panel still left ambiguity about which row a
+  // description belonged to when tapping near the top of a tall list - a
+  // centred Dialog (same pattern the Work section's project detail already
+  // uses) sidesteps that entirely, since it's independent of scroll
+  // position. Cheap too: open/close is just the dialog's own opacity/
+  // transform fade + a fixed backdrop, no reflow of the list underneath.
+  const [dialogOpen, setDialogOpen] = useState(false);
   const selectExperience = (index: number) => {
     setActiveStep(index);
-    panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    setDialogOpen(true);
   };
 
   return (
@@ -64,7 +67,7 @@ const ExperienceSection: React.FC = () => {
                     component="button"
                     type="button"
                     aria-pressed={isActive}
-                    aria-controls="experience-detail-panel"
+                    aria-haspopup="dialog"
                     onClick={() => selectExperience(index)}
                     sx={{
                       all: 'unset', boxSizing: 'border-box', width: '100%', cursor: 'pointer',
@@ -114,34 +117,40 @@ const ExperienceSection: React.FC = () => {
               })}
             </Box>
 
-            <Paper
-              ref={panelRef}
-              id="experience-detail-panel"
-              aria-live="polite"
-              elevation={0}
-              sx={{
-                p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 2,
-                position: 'relative', overflow: 'hidden', contain: 'layout style',
-                '&::before': {
-                  content: '""', position: 'absolute', top: 0, left: 0,
-                  width: 3, height: '100%', backgroundColor: 'primary.main', borderRadius: '2px 0 0 2px',
-                },
-              }}
+            <Dialog
+              open={dialogOpen}
+              onClose={() => setDialogOpen(false)}
+              maxWidth="sm"
+              fullWidth
+              aria-labelledby="experience-dialog-title"
+              PaperProps={{ sx: { backgroundImage: 'none', backgroundColor: '#0c1a30', border: '1px solid', borderColor: 'divider' } }}
             >
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeStep}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.2 }}
+              <DialogContent sx={{ p: 3, position: 'relative' }}>
+                <IconButton
+                  aria-label="Close"
+                  onClick={() => setDialogOpen(false)}
+                  sx={{ position: 'absolute', right: 12, top: 12 }}
                 >
-                  <Typography variant="body2" sx={{ fontSize: '0.9rem', lineHeight: 1.7, color: 'text.secondary' }}>
-                    {experiences[activeStep].description}
-                  </Typography>
-                </motion.div>
-              </AnimatePresence>
-            </Paper>
+                  <CloseIcon />
+                </IconButton>
+                <Typography
+                  id="experience-dialog-title"
+                  variant="h5"
+                  component="h3"
+                  sx={{ fontWeight: 700, fontSize: '1.3rem', lineHeight: 1.25, mb: 0.5, pr: 5 }}
+                >
+                  {experiences[activeStep].title}
+                </Typography>
+                <Typography
+                  sx={{ fontSize: '0.85rem', color: 'primary.main', fontFamily: '"Space Mono", monospace', mb: 2 }}
+                >
+                  {experiences[activeStep].company} · {experiences[activeStep].period}
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.95rem', lineHeight: 1.7, color: 'text.secondary' }}>
+                  {experiences[activeStep].description}
+                </Typography>
+              </DialogContent>
+            </Dialog>
           </Box>
         )}
 
