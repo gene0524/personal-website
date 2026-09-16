@@ -5,7 +5,6 @@ import { motion, useReducedMotion } from 'framer-motion';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import { personalInfo } from '../../data/personalInfo';
 import { FONT_MONO } from '../../themes';
-import ParticleNetwork from '../ParticleNetwork';
 import { ORBITAL_SYSTEM_DEFAULTS, ORBITAL_SYSTEM_MOBILE_OVERRIDES, type OrbitalSystemTuning } from '../orbitalSystemTuning';
 
 // three.js chunk loads after first paint so the hero text and portrait (LCP) never wait for it
@@ -68,10 +67,10 @@ const useTypewriter = (enabled: boolean) => {
 
 // Isolated into its own component so the ~every-40-95ms setState driving the
 // typing animation only re-renders this small subtree, not all of
-// HeroSection (portrait, OrbitalSystem/ParticleNetwork wrappers, buttons,
-// social links...) on every keystroke - that full-tree re-render, competing
-// with the hero's other animation systems right as they're warming up on
-// load, was the stutter Gene felt specifically while the role text typed.
+// HeroSection (portrait, OrbitalSystem wrapper, buttons, social links...) on
+// every keystroke - that full-tree re-render, competing with the hero's
+// other animation systems right as they're warming up on load, was the
+// stutter Gene felt specifically while the role text typed.
 const TypewriterRole: React.FC<{ reducedMotion: boolean }> = ({ reducedMotion }) => {
   const typedRole = useTypewriter(!reducedMotion);
   return (
@@ -192,18 +191,15 @@ const HeroSection: React.FC = () => {
         justifyContent: 'center',
       }}
     >
-      {/* Background starfield — the original 2D connecting-dots network, sitting
-          behind the solar system like a distant sky. zIndex:1 (a real stacking
-          layer, not the 'auto' AboutSection sits at) is what lets this bleed
-          show up ON TOP of the next section's top edge instead of being
-          painted over by it despite coming later in the DOM. */}
-      {!reducedMotion && (
-        <Box aria-hidden="true" sx={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1, ...bleedSx }}>
-          <ParticleNetwork />
-        </Box>
-      )}
-
-      {/* Perspective solar system across the whole hero, behind the content; the portrait is its sun */}
+      {/* Perspective solar system across the whole hero, behind the content;
+          the portrait is its sun. The connecting-dots particle network used
+          to be a second, independent 2D-canvas layer here - now rendered
+          inside OrbitalSystem's own WebGL scene (camera-space Points/
+          LineSegments) instead, so the hero runs one rendering pipeline
+          instead of two fighting for the same frame budget. zIndex:1 (a real
+          stacking layer, not the 'auto' AboutSection sits at) is what lets
+          this bleed show up ON TOP of the next section's top edge instead of
+          being painted over by it despite coming later in the DOM. */}
       <Box aria-hidden="true" sx={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1, ...bleedSx }}>
         {sphereReady && (
           <Suspense fallback={null}>

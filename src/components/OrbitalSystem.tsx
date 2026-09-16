@@ -74,10 +74,63 @@ const STAR_FRAG = /* glsl */ `
   }
 `;
 
+// aBoost (0 or 1, written per-frame from cursor proximity in updateParticles)
+// recreates the original 2D version's "bigger/brighter glow near the
+// cursor" without a second draw call per particle - one shader handles both
+// states.
+const PARTICLE_VERT = /* glsl */ `
+  attribute float aRadius;
+  attribute float aBoost;
+  uniform float uPixelRatio;
+  varying float vBoost;
+  void main() {
+    vBoost = aBoost;
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    gl_PointSize = aRadius * (2.0 + aBoost * 1.6) * uPixelRatio;
+    gl_Position = projectionMatrix * mv;
+  }
+`;
+const PARTICLE_FRAG = /* glsl */ `
+  uniform sampler2D uMap;
+  varying float vBoost;
+  void main() {
+    float a = texture2D(uMap, gl_PointCoord).a;
+    gl_FragColor = vec4(1.0, 1.0, 1.0, a * mix(0.55, 0.95, vBoost));
+  }
+`;
+
 const orbitPoint = (a: number, e: number, theta: number, out: THREE.Vector3) => {
   const r = (a * (1 - e * e)) / (1 + e * Math.cos(theta));
   return out.set(r * Math.cos(theta), 0, r * Math.sin(theta));
 };
+
+// Was a second, fully independent rendering pipeline (2D canvas, own rAF
+// loop, own resize/visibility observers) layered behind this WebGL scene -
+// two systems each individually cheap-ish but concurrently fighting the
+// mobile GPU/main thread for the same frame budget. Ported into this scene
+// as camera-space Points/LineSegments (a child of the camera, not the
+// rotating root group, so it stays flat/screen-aligned regardless of the
+// scene's roll/elevation/parallax - matching the original flat overlay
+// look) instead of a second canvas context.
+const PARTICLE_DENSITY_REF = { count: 80, width: 1440, height: 900 };
+const MIN_PARTICLES = 20;
+const MAX_PARTICLES = 100;
+const CONNECT_DIST = 100;
+const MOUSE_RADIUS = 160;
+const MOUSE_INFLUENCE = 0.12;
+const REPEL_DIST = 32;
+const REPEL_FORCE = 0.28;
+const PARTICLE_MAX_SPEED = 1.4;
+const PARTICLE_DAMPING = 0.976;
+const PARTICLE_DISTANCE = 6; // depth in front of the camera, in world units
+const MAX_LINE_SEGMENTS = MAX_PARTICLES * 10;
+
+const particleTargetCount = (w: number, h: number) => {
+  const scaled = Math.round((PARTICLE_DENSITY_REF.count * (w * h)) / (PARTICLE_DENSITY_REF.width * PARTICLE_DENSITY_REF.height));
+  return Math.min(MAX_PARTICLES, Math.max(MIN_PARTICLES, scaled));
+};
+
+interface Particle { x: number; y: number; vx: number; vy: number; radius: number }
 
 // The app's actual scroll container is a nested Box (overflowY: auto in
 // App.tsx), not window/document - walk up to find it so the anchor-sync
@@ -156,6 +209,9 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
     camera.lookAt(0, 0, 0);
     camera.rotateZ(ROLL);
     camera.updateMatrixWorld();
+    // Camera must be in the scene graph for its own children (the particle
+    // group below) to render.
+    scene.add(camera);
 
     const accentColor = new THREE.Color(accent);
     const disposables: { dispose: () => void }[] = [];
@@ -241,6 +297,26 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
     let bodies: { a: number; e: number; planet: THREE.Mesh; theta: number; speed: number }[] = [];
     let starMaterial: THREE.ShaderMaterial | null = null;
 
+    // Particle network state (see the comment above PARTICLE_DENSITY_REF).
+    // Physics runs in host-relative CSS pixel space, same as the original
+    // 2D-canvas version, then gets projected onto the camera-space plane
+    // each frame; planeW/H (that plane's size in world units at the
+    // camera's current FOV/aspect) and hostW/H are recomputed on resize.
+    let particles: Particle[] = [];
+    let particleGroup: THREE.Group | null = null;
+    let particlePoints: THREE.Points | null = null;
+    let particleLines: THREE.LineSegments | null = null;
+    let planeW = 0;
+    let planeH = 0;
+    let hostW = 0;
+    let hostH = 0;
+    let lastParticleW = 0;
+    let lastParticleH = 0;
+    let mouseX = -9999;
+    let mouseY = -9999;
+    let mousePrevX = -9999;
+    let mousePrevY = -9999;
+
     const halfHeight = FOCUS_DISTANCE * Math.tan((FOV / 2) * (Math.PI / 180));
     const syncAnchor = () => {
       const anchor = anchorRef.current;
@@ -268,6 +344,122 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
       discRoot.position.copy(
         camera.localToWorld(new THREE.Vector3(ocx, ocy, -FOCUS_DISTANCE)).sub(root.position),
       );
+    };
+
+    // Seeds or proportionally rescales the pixel-space particle simulation
+    // to the host's current CSS size - same logic ParticleNetwork used to
+    // run off its own ResizeObserver, now driven by this scene's resize().
+    const seedOrRescaleParticles = (w: number, h: number) => {
+      if (w < 1 || h < 1) return;
+      hostW = w;
+      hostH = h;
+      const count = particleTargetCount(w, h);
+      if (particles.length !== count) {
+        particles = Array.from({ length: count }, () => ({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          vx: (Math.random() - 0.5) * 0.6,
+          vy: (Math.random() - 0.5) * 0.6,
+          radius: Math.random() * 1.6 + 0.8,
+        }));
+      } else if (lastParticleW > 20 && lastParticleH > 20 && (Math.abs(w - lastParticleW) > 1 || Math.abs(h - lastParticleH) > 1)) {
+        const sx = w / lastParticleW;
+        const sy = h / lastParticleH;
+        for (const p of particles) { p.x *= sx; p.y *= sy; }
+      }
+      lastParticleW = w;
+      lastParticleH = h;
+    };
+
+    // Host-pixel-space (x,y) -> camera-space plane-local (x,y), matching
+    // planeW/H computed in resize() for the current FOV/aspect.
+    const toPlane = (px: number, py: number): [number, number] => [
+      (px / hostW - 0.5) * planeW,
+      -(py / hostH - 0.5) * planeH,
+    ];
+
+    // Physics step is a straight port of the original 2D-canvas simulation
+    // (same constants, same fixed-per-frame-tick feel, no dt scaling - that
+    // matches the original's behaviour exactly rather than introducing a
+    // frame-rate-independent variant that would feel different). Buffer
+    // writes only happen once the particle stage below has actually built
+    // the Points/LineSegments objects.
+    const updateParticles = () => {
+      const mvx = mouseX - mousePrevX;
+      const mvy = mouseY - mousePrevY;
+      mousePrevX = mouseX;
+      mousePrevY = mouseY;
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        const cdx = mouseX - p.x;
+        const cdy = mouseY - p.y;
+        const cdist = Math.sqrt(cdx * cdx + cdy * cdy);
+        if (cdist < MOUSE_RADIUS && cdist > 0) {
+          const influence = (1 - cdist / MOUSE_RADIUS) * MOUSE_INFLUENCE;
+          p.vx += mvx * influence;
+          p.vy += mvy * influence;
+        }
+        for (let j = i + 1; j < particles.length; j++) {
+          const q = particles[j];
+          const dx = p.x - q.x;
+          const dy = p.y - q.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < REPEL_DIST && dist > 0) {
+            const force = ((REPEL_DIST - dist) / REPEL_DIST) * REPEL_FORCE;
+            const fx = (dx / dist) * force;
+            const fy = (dy / dist) * force;
+            p.vx += fx; p.vy += fy;
+            q.vx -= fx; q.vy -= fy;
+          }
+        }
+        p.vx *= PARTICLE_DAMPING;
+        p.vy *= PARTICLE_DAMPING;
+        const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+        if (speed > PARTICLE_MAX_SPEED) {
+          p.vx = (p.vx / speed) * PARTICLE_MAX_SPEED;
+          p.vy = (p.vy / speed) * PARTICLE_MAX_SPEED;
+        }
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0) { p.x = 0; p.vx *= -0.8; }
+        if (p.x > hostW) { p.x = hostW; p.vx *= -0.8; }
+        if (p.y < 0) { p.y = 0; p.vy *= -0.8; }
+        if (p.y > hostH) { p.y = hostH; p.vy *= -0.8; }
+      }
+
+      if (!particlePoints || !particleLines) return;
+      const posAttr = particlePoints.geometry.attributes.position as THREE.BufferAttribute;
+      const boostAttr = particlePoints.geometry.attributes.aBoost as THREE.BufferAttribute;
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        const [lx, ly] = toPlane(p.x, p.y);
+        posAttr.setXYZ(i, lx, ly, 0);
+        const dx = mouseX - p.x;
+        const dy = mouseY - p.y;
+        boostAttr.setX(i, Math.hypot(dx, dy) < MOUSE_RADIUS * 0.7 ? 1 : 0);
+      }
+      posAttr.needsUpdate = true;
+      boostAttr.needsUpdate = true;
+      particlePoints.geometry.setDrawRange(0, particles.length);
+
+      const linePosAttr = particleLines.geometry.attributes.position as THREE.BufferAttribute;
+      let segCount = 0;
+      for (let i = 0; i < particles.length && segCount < MAX_LINE_SEGMENTS; i++) {
+        for (let j = i + 1; j < particles.length && segCount < MAX_LINE_SEGMENTS; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < CONNECT_DIST) {
+            const [ax, ay] = toPlane(particles[i].x, particles[i].y);
+            const [bx, by] = toPlane(particles[j].x, particles[j].y);
+            linePosAttr.setXYZ(segCount * 2, ax, ay, 0);
+            linePosAttr.setXYZ(segCount * 2 + 1, bx, by, 0);
+            segCount++;
+          }
+        }
+      }
+      linePosAttr.needsUpdate = true;
+      particleLines.geometry.setDrawRange(0, segCount * 2);
     };
 
     let frame = 0;
@@ -313,6 +505,7 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
         const k = 1 + b.e * Math.cos(b.theta);
         b.theta = (b.theta + dt * b.speed * k * k) % (Math.PI * 2);
       });
+      updateParticles();
       render();
       frame = requestAnimationFrame(tick);
     };
@@ -327,13 +520,29 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
       renderer.setSize(Math.max(1, width), Math.max(1, height), false);
       camera.aspect = width / Math.max(1, height);
       camera.updateProjectionMatrix();
+      // Camera-space plane size for the particle layer at its fixed depth -
+      // recomputed here since it depends on aspect/FOV, both of which can
+      // change on resize.
+      planeH = 2 * PARTICLE_DISTANCE * Math.tan(THREE.MathUtils.degToRad(FOV) / 2);
+      planeW = planeH * camera.aspect;
+      seedOrRescaleParticles(width, height);
+      updateParticles();
       syncAnchor();
       render();
     };
     const onPointerMove = (e: PointerEvent) => {
+      const hostRect = host.getBoundingClientRect();
+      mouseX = e.clientX - hostRect.left;
+      mouseY = e.clientY - hostRect.top;
       if (reducedMotion) return;
       targetY = (e.clientX / window.innerWidth - 0.5) * 0.1;
       targetX = (e.clientY / window.innerHeight - 0.5) * 0.06;
+    };
+    const onPointerLeave = () => {
+      mouseX = -9999;
+      mouseY = -9999;
+      mousePrevX = -9999;
+      mousePrevY = -9999;
     };
     const onVisibility = () => (document.hidden ? stop() : start());
 
@@ -450,6 +659,62 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
       if (cancelled) return;
       renderer.compile(scene, camera);
 
+      await yieldToMain();
+      if (cancelled) return;
+
+      // Stage: particle network - camera-space (child of camera, not the
+      // rotating root/discRoot groups) so it stays flat/screen-aligned
+      // regardless of the scene's roll/elevation/parallax, matching the
+      // original 2D-canvas overlay's look. Seeded here (not left for the
+      // later resize() call during wiring) so the geometry has real particle
+      // data - correct count, per-particle radius - from its first frame.
+      // Skipped under reducedMotion, matching the old ParticleNetwork (which
+      // simply wasn't rendered) rather than showing a frozen static field.
+      if (!reducedMotion) {
+        particleGroup = new THREE.Group();
+        particleGroup.position.z = -PARTICLE_DISTANCE;
+        camera.add(particleGroup);
+
+        const initialRect = host.getBoundingClientRect();
+        planeH = 2 * PARTICLE_DISTANCE * Math.tan(THREE.MathUtils.degToRad(FOV) / 2);
+        planeW = planeH * (initialRect.width / Math.max(1, initialRect.height));
+        seedOrRescaleParticles(initialRect.width, initialRect.height);
+
+        const particlePositions = new Float32Array(MAX_PARTICLES * 3);
+        const particleRadii = new Float32Array(MAX_PARTICLES);
+        const particleBoosts = new Float32Array(MAX_PARTICLES);
+        particles.forEach((p, i) => { particleRadii[i] = p.radius; });
+        const particleGeometry = new THREE.BufferGeometry();
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+        particleGeometry.setAttribute('aRadius', new THREE.BufferAttribute(particleRadii, 1));
+        particleGeometry.setAttribute('aBoost', new THREE.BufferAttribute(particleBoosts, 1));
+        particleGeometry.setDrawRange(0, particles.length);
+        const particleMaterial = new THREE.ShaderMaterial({
+          uniforms: { uMap: { value: dotTexture }, uPixelRatio: { value: pixelRatio } },
+          vertexShader: PARTICLE_VERT,
+          fragmentShader: PARTICLE_FRAG,
+          transparent: true,
+          depthWrite: false,
+          depthTest: false,
+          blending: THREE.AdditiveBlending,
+        });
+        particlePoints = new THREE.Points(particleGeometry, particleMaterial);
+        particleGroup.add(particlePoints);
+        disposables.push(particleGeometry, particleMaterial);
+
+        const lineGeometry = new THREE.BufferGeometry();
+        lineGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MAX_LINE_SEGMENTS * 6), 3));
+        lineGeometry.setDrawRange(0, 0);
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xa0d2ff, transparent: true, opacity: 0.3, depthWrite: false });
+        particleLines = new THREE.LineSegments(lineGeometry, lineMaterial);
+        particleGroup.add(particleLines);
+        disposables.push(lineGeometry, lineMaterial);
+
+        updateParticles();
+      }
+      if (cancelled) return;
+      renderer.compile(scene, camera);
+
       // Wire up observers/listeners and actually start rendering - only now,
       // with everything built and pre-compiled, is the first real render()
       // call cheap.
@@ -461,6 +726,7 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
       ro.observe(host);
       io.observe(host);
       window.addEventListener('pointermove', onPointerMove, { passive: true });
+      window.addEventListener('mouseleave', onPointerLeave);
       document.addEventListener('visibilitychange', onVisibility);
       scrollParent.addEventListener('scroll', onScroll, { passive: true });
       wired = true;
@@ -476,6 +742,7 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
         ro?.disconnect();
         io?.disconnect();
         window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('mouseleave', onPointerLeave);
         document.removeEventListener('visibilitychange', onVisibility);
         scrollParent.removeEventListener('scroll', onScroll);
       }
