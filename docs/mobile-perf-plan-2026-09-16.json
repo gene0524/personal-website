@@ -98,6 +98,21 @@
         "measurementLimitation": "Could not get a reliable local before/after number for this one, unlike P1/P2. Two methods tried, both failed to be a faithful proxy: (1) headless Chrome forced to software-render via --use-gl=angle --use-angle=swiftshader (the flag used for the WebGL hero work) produced wildly noisy rAF frame-gap data (avg swung 94ms->262ms run to run on the IDENTICAL build) - not trustworthy. (2) Headless Chrome with real macOS GPU + CDP 4x CPU throttle gave clean, low-noise data (~18ms avg frame time, ~60fps) but showed almost no difference before/after (66.7ms worst either way) - because CDP CPU throttling doesn't throttle GPU compositing at all, and a MacBook GPU is far more capable than a phone GPU, so this environment can't reproduce phone-specific backdrop-filter cost either. backdrop-filter being expensive on mobile GPUs specifically (vs. desktop) is a well-documented pattern independent of this session's measurements.",
         "verdict": "Implemented and pushed on the strength of the well-documented mobile backdrop-filter cost pattern + no visual regression, not a locally-measured number - explicitly flagged this gap to Gene before pushing. Needs his real-phone confirmation (same workflow as P1/P2: push, he tests, reports back) rather than a Lighthouse/Puppeteer number this time."
       }
+    },
+    {
+      "priority": "discovered mid-session, not in original P1-P5",
+      "id": "WF2",
+      "name": "Round 2: Work filmstrip still janky after WF1, plus Experience accordion jank",
+      "why": "Gene tested WF1 on his phone: filmstrip is '好一點' (a bit better) but '還是挺卡' (still pretty janky). Separately reported Experience section (collapse one entry, expand another) is also janky.",
+      "how": "Experience: MUI Accordion/Collapse animates height via JS-measured scrollHeight + explicit pixel transition, forcing layout every frame - classic anti-pattern, unrelated to anything from WF1/P1/P2. Work filmstrip round 2: the breathing accent-ring glow ran as a Framer JS animate={} loop (repeat: Infinity) on all 11 cards unconditionally regardless of visibility - wasted main-thread work. The ambient-glow layer's blur(48px) on the card's own screenshot is the same GPU-cost category as the backdrop-filter already removed in WF1, just not touched yet.",
+      "effort": "~0.5 day",
+      "status": "done-pending-device-confirmation",
+      "result": {
+        "implementation": "Experience (mobile only): replaced <Accordion>/<AccordionSummary>/<AccordionDetails> with a plain button header + Box using display:grid, gridTemplateRows: expanded?'1fr':'0fr', transition:'grid-template-rows 0.3s ease', inner Box with overflow:hidden - no JS height measurement, browser interpolates the CSS grid track natively. Work: (a) breathing ring's Framer animate={opacity:[0.55,1,0.55], repeat:Infinity} replaced with an emotion keyframes() CSS animation, same values/timing, respects reducedMotion. (b) ambient glow blur radius reduced from blur(48px) to blur(20px) below the md breakpoint (useMediaQuery(theme.breakpoints.down('md')) added to StageCard), grayscale/brightness coverflow filter and the 11-cards-always-mounted structure both left alone per Gene's confirmation not to touch the core visual design without discussing further.",
+        "visualRegression": "None observed in screenshots (collapsed/expanded Experience states, Work card ring glow) at 390x844.",
+        "measurementLimitation": "Same local-measurement gap as WF1 - no faithful way to reproduce phone-specific GPU/layout-thrash cost in this environment. Shipped on the technical merits (height-animation-forces-layout and idle-animation-still-runs are textbook, uncontroversial performance issues, not judgment calls) plus visual-regression screenshots, not a measured number.",
+        "verdict": "Pending Gene's real-phone re-test. Two candidates flagged but NOT implemented (his call, matches the antialias/DPR pattern of not silently changing core visual design): further reducing/removing the grayscale+brightness coverflow filter, and virtualizing the filmstrip so only cards near the viewport mount their full useScroll/useTransform chain instead of all 11 always running."
+      }
     }
   ],
   "openQuestions": [
