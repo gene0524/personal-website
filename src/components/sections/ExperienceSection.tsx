@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Box, Typography, Container, Grid, Paper,
-  Accordion, AccordionSummary, AccordionDetails,
   useTheme, useMediaQuery,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -39,27 +38,32 @@ const ExperienceSection: React.FC = () => {
           <Box>
             {experiences.map((exp, index) => {
               const IconComponent = exp.icon;
+              const expanded = activeStep === index;
+              const panelId = `experience-panel-${index}`;
               return (
-                <Accordion
+                <Box
                   key={exp.title}
-                  expanded={activeStep === index}
-                  onChange={() => setActiveStep(activeStep === index ? -1 : index)}
-                  disableGutters
-                  elevation={0}
                   sx={{
                     backgroundColor: 'background.paper',
                     border: '1px solid',
-                    borderColor: activeStep === index ? 'rgba(0,255,157,0.35)' : 'divider',
-                    borderRadius: '8px !important',
+                    borderColor: expanded ? 'rgba(0,255,157,0.35)' : 'divider',
+                    borderRadius: '8px',
                     mb: 1.5,
                     overflow: 'hidden',
-                    '&::before': { display: 'none' },
                     transition: 'border-color 0.3s',
                   }}
                 >
-                  <AccordionSummary
-                    expandIcon={<ExpandMoreIcon sx={{ color: activeStep === index ? 'primary.main' : 'text.secondary' }} />}
-                    sx={{ px: 2, py: 1 }}
+                  <Box
+                    component="button"
+                    type="button"
+                    aria-expanded={expanded}
+                    aria-controls={panelId}
+                    onClick={() => setActiveStep(expanded ? -1 : index)}
+                    sx={{
+                      all: 'unset', boxSizing: 'border-box', width: '100%', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1,
+                      px: 2, py: 1,
+                    }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                       <Box
@@ -67,22 +71,22 @@ const ExperienceSection: React.FC = () => {
                           width: 34, height: 34,
                           borderRadius: '50%',
                           border: '2px solid',
-                          borderColor: activeStep === index ? 'primary.main' : 'divider',
-                          backgroundColor: activeStep === index ? 'rgba(0,255,157,0.1)' : 'background.default',
+                          borderColor: expanded ? 'primary.main' : 'divider',
+                          backgroundColor: expanded ? 'rgba(0,255,157,0.1)' : 'background.default',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           flexShrink: 0,
-                          boxShadow: activeStep === index ? '0 0 10px rgba(0,255,157,0.35)' : 'none',
+                          boxShadow: expanded ? '0 0 10px rgba(0,255,157,0.35)' : 'none',
                           transition: 'all 0.3s',
                         }}
                       >
-                        <IconComponent sx={{ fontSize: 16, color: activeStep === index ? 'primary.main' : 'text.secondary' }} />
+                        <IconComponent sx={{ fontSize: 16, color: expanded ? 'primary.main' : 'text.secondary' }} />
                       </Box>
-                      <Box>
+                      <Box sx={{ textAlign: 'left' }}>
                         <Typography
                           sx={{
                             fontWeight: 700,
                             fontSize: '0.95rem',
-                            color: activeStep === index ? 'text.primary' : 'text.secondary',
+                            color: expanded ? 'text.primary' : 'text.secondary',
                             lineHeight: 1.3,
                           }}
                         >
@@ -100,22 +104,38 @@ const ExperienceSection: React.FC = () => {
                         </Typography>
                       </Box>
                     </Box>
-                  </AccordionSummary>
+                    <ExpandMoreIcon
+                      sx={{
+                        color: expanded ? 'primary.main' : 'text.secondary',
+                        flexShrink: 0,
+                        transform: expanded ? 'rotate(180deg)' : 'none',
+                        transition: 'transform 0.3s',
+                      }}
+                    />
+                  </Box>
 
-                  <AccordionDetails
-                    sx={{
-                      px: 2, pt: 0, pb: 2,
-                      borderTop: '1px solid rgba(0,255,157,0.15)',
-                    }}
+                  {/* grid-template-rows 0fr->1fr instead of MUI Collapse's
+                      JS-measured height animation - height animates without
+                      the browser re-measuring scrollHeight and forcing
+                      layout on every frame, which was the actual jank source
+                      when collapsing one card while expanding another. */}
+                  <Box
+                    id={panelId}
+                    role="region"
+                    sx={{ display: 'grid', gridTemplateRows: expanded ? '1fr' : '0fr', transition: 'grid-template-rows 0.3s ease' }}
                   >
-                    <Typography
-                      variant="body2"
-                      sx={{ fontSize: '0.9rem', lineHeight: 1.7, color: 'text.secondary' }}
-                    >
-                      {exp.description}
-                    </Typography>
-                  </AccordionDetails>
-                </Accordion>
+                    <Box sx={{ overflow: 'hidden' }}>
+                      <Box sx={{ px: 2, pt: 0, pb: 2, borderTop: '1px solid rgba(0,255,157,0.15)' }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ fontSize: '0.9rem', lineHeight: 1.7, color: 'text.secondary' }}
+                        >
+                          {exp.description}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Box>
               );
             })}
           </Box>

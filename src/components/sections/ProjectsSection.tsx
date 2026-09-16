@@ -10,6 +10,7 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
+import { keyframes } from '@emotion/react';
 import {
   motion,
   useReducedMotion,
@@ -56,6 +57,12 @@ const CARD_W = { xs: 'clamp(240px, 78vw, 380px)', sm: 'clamp(380px, 55vw, 460px)
 const CARD_FLEX_SX = { xs: `0 0 ${CARD_W.xs}`, sm: `0 0 ${CARD_W.sm}`, md: `0 0 ${CARD_W.md}` };
 const TRACK_PX_SX = { xs: `calc(50% - (${CARD_W.xs}) / 2)`, sm: `calc(50% - (${CARD_W.sm}) / 2)`, md: `calc(50% - (${CARD_W.md}) / 2)` };
 const FILMSTRIP_ITEM = '[data-filmstrip-item]';
+// The accent ring's "breathing" glow used to be a Framer animate={} loop
+// running continuously (repeat: Infinity) on EVERY card's motion.div, all 11
+// at once regardless of visibility - pure wasted main-thread work for the
+// ~9 that are off to the side. A CSS keyframe does the identical animation
+// on the compositor, for free, whether or not the card is ever centred.
+const breathe = keyframes`0%, 100% { opacity: 0.55; } 50% { opacity: 1; }`;
 const GLASS_STROKE = '1px solid rgba(255,255,255,0.14)';
 // Measured: toggling backdrop-filter on/off during the scroll (via a
 // data-scrolling attribute) made jank WORSE - forcing the browser to
@@ -118,6 +125,11 @@ interface StageCardProps {
 const StageCard: React.FC<StageCardProps> = ({ project, index, total, trackRef, onOpen, onCenter, reducedMotion }) => {
   const theme = useTheme();
   const accent = theme.palette.primary.main;
+  // Ambient glow's blur radius, not the grayscale/brightness coverflow
+  // filter - reduced (not removed) below 900px since blur(48px) over a
+  // roughly card-sized area is one of the pricier per-card GPU costs,
+  // same category as the backdrop-filter already dropped there.
+  const isSmall = useMediaQuery(theme.breakpoints.down('md'));
   const ref = useRef<HTMLDivElement>(null);
   const img = projectImageUrl(project);
   const live = project.links.live;
@@ -170,7 +182,7 @@ const StageCard: React.FC<StageCardProps> = ({ project, index, total, trackRef, 
             inset: '-6% -8%',
             zIndex: 0,
             borderRadius: 40,
-            filter: 'blur(48px) saturate(1.7) brightness(0.8)',
+            filter: `blur(${isSmall ? 20 : 48}px) saturate(1.7) brightness(0.8)`,
             background: img
               ? `url(${img}) center / cover no-repeat`
               : `radial-gradient(60% 60% at 30% 30%, ${alpha(accent, 0.5)}, transparent 70%)`,
@@ -179,14 +191,13 @@ const StageCard: React.FC<StageCardProps> = ({ project, index, total, trackRef, 
         />
         {/* Accent ring, breathing while the card is centred */}
         <motion.div aria-hidden="true" style={{ opacity: active, position: 'absolute', inset: 0, zIndex: 0, borderRadius: 20, pointerEvents: 'none' }}>
-          <motion.div
-            animate={reducedMotion ? undefined : { opacity: [0.55, 1, 0.55] }}
-            transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-            style={{
+          <Box
+            sx={{
               position: 'absolute',
               inset: 0,
-              borderRadius: 20,
+              borderRadius: '20px',
               boxShadow: `0 0 0 1px ${alpha(accent, 0.55)}, 0 0 60px ${alpha(accent, 0.22)}, 0 0 120px ${alpha(accent, 0.12)}`,
+              animation: reducedMotion ? 'none' : `${breathe} 3.2s ease-in-out infinite`,
             }}
           />
         </motion.div>
