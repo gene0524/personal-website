@@ -116,8 +116,17 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
     const ELEVATION = THREE.MathUtils.degToRad(elevationDeg);
     const ROLL = THREE.MathUtils.degToRad(rollDeg);
 
+    // Re-evaluated whenever this effect reruns, which already happens on a
+    // mobile/desktop tuning-profile swap (elevationDeg etc. are in the dep
+    // array), so this tracks the same breakpoint HeroSection uses without a
+    // separate resize listener.
+    const isSmall = window.innerWidth < 900;
+
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'low-power' });
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    // Capped lower on mobile: WebGL cost scales with pixelRatio^2, so 3 -> 1.5
+    // on a DPR-3 phone is a 4x reduction in pixels rendered. The scene is
+    // already fogged/blurred enough that the softer edge isn't perceptible.
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, isSmall ? 1.5 : 2);
     renderer.setPixelRatio(pixelRatio);
     renderer.setClearColor(0x000000, 0);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -327,7 +336,7 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
         frame.rotation.x = THREE.MathUtils.degToRad(o.inc);
         discRoot.add(frame);
 
-        const segments = 256;
+        const segments = isSmall ? 96 : 256;
         const pts: number[] = [];
         for (let s = 0; s <= segments; s++) {
           orbitPoint(a, o.e, (s / segments) * Math.PI * 2, tmp);
@@ -339,7 +348,7 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
         frame.add(new THREE.Line(geometry, lineMaterial));
         disposables.push(geometry, lineMaterial);
 
-        const planetGeometry = new THREE.SphereGeometry(size, 40, 40);
+        const planetGeometry = new THREE.SphereGeometry(size, isSmall ? 20 : 40, isSmall ? 20 : 40);
         const planetMaterial = new THREE.MeshStandardMaterial({ color: o.color, roughness: 0.7, metalness: 0, emissive: new THREE.Color(o.color), emissiveIntensity: 0.14, fog: true });
         const planet = new THREE.Mesh(planetGeometry, planetMaterial);
         frame.add(planet);
