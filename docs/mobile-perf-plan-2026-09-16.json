@@ -4,13 +4,45 @@
     "created": "2026-09-16",
     "method": "npm run build + vite preview (production build, port 4173) + npx lighthouse@12.8.2 --preset=perf, throttling-method=simulate, both mobile and desktop form factors. Compared against the pre-session baseline already recorded in site-audit-2026-09-15.json.measurements.lighthouse.",
     "statusLegend": "todo | in-progress | done | wontfix",
-    "relatedDocs": ["site-audit-2026-09-15.json", "hero-scene-plan-2026-09-16.json"]
+    "relatedDocs": [
+      "site-audit-2026-09-15.json",
+      "hero-scene-plan-2026-09-16.json"
+    ]
   },
   "measurements": {
-    "before_2026-09-15": { "mobile": { "performance": 81, "fcp": "3.1s", "lcp": "3.3s", "tbt": "250ms", "tti": "3.6s", "speedIndex": "3.1s" }, "desktop": { "performance": 99, "fcp": "0.7s", "lcp": "0.8s", "tbt": "0ms" } },
+    "before_2026-09-15": {
+      "mobile": {
+        "performance": 81,
+        "fcp": "3.1s",
+        "lcp": "3.3s",
+        "tbt": "250ms",
+        "tti": "3.6s",
+        "speedIndex": "3.1s"
+      },
+      "desktop": {
+        "performance": 99,
+        "fcp": "0.7s",
+        "lcp": "0.8s",
+        "tbt": "0ms"
+      }
+    },
     "after_2026-09-16": {
-      "mobile": { "performance": 72, "fcp": "2.8s", "lcp": "5.2s", "tbt": "220ms", "tti": "6.7s", "speedIndex": "3.8s", "maxPotentialFID": "280ms" },
-      "desktop": { "performance": 57, "fcp": "2.9s", "lcp": "5.1s", "tbt": "140ms", "tti": "6.5s" },
+      "mobile": {
+        "performance": 72,
+        "fcp": "2.8s",
+        "lcp": "5.2s",
+        "tbt": "220ms",
+        "tti": "6.7s",
+        "speedIndex": "3.8s",
+        "maxPotentialFID": "280ms"
+      },
+      "desktop": {
+        "performance": 57,
+        "fcp": "2.9s",
+        "lcp": "5.1s",
+        "tbt": "140ms",
+        "tti": "6.5s"
+      },
       "caveat": "Not a perfectly apples-to-apples run (throttling method/version may differ slightly from the original audit's Lighthouse 13 run), but the absolute numbers and the diagnostic breakdown below are real, from this build, and tell a clear story on their own regardless of the exact delta vs the old baseline."
     },
     "verdict": "Confirmed regression, and it is NOT mobile-specific - desktop dropped from 99 to 57, proportionally worse than mobile's 81->72. This is a genuine amount of main-thread work, not just mobile CPU throttling exposing something that was always marginal.",
@@ -34,8 +66,24 @@
         "implementation": "Split the single synchronous useEffect into: sync Stage A (renderer/camera/scene/fog/root groups/corona/portrait sprite/lights), then an async IIFE with a yieldToMain() (requestIdleCallback w/ 50ms timeout fallback, falls back to setTimeout(0)) between Stage B (orbit lines + planets) and Stage C (star field). renderer.compile(scene, camera) called after each stage. Observer/listener wiring + start() deferred until all stages complete. Cleanup handles both full-teardown and mid-setup-cancellation via cancelled/wired flags.",
         "visualRegression": "None - screenshots before/after are pixel-identical, confirmed by Gene.",
         "measurementMethod": "npm run build + vite preview (port 4173) + lighthouse@12.8.2, mobile form factor. IMPORTANT: switched to --throttling-method=devtools (real CPU/network throttling during recording) instead of the default simulate (post-hoc mathematical estimate) because simulate showed no change at all (0.72->0.70, likely too coarse to register short real-world yields as paint opportunities). devtools is the faithful signal for a main-thread-yielding fix. Same exact build isolated by git stash push -- src/components/OrbitalSystem.tsx for the pre-P1 baseline, git stash pop to restore.",
-        "before_devtools": { "performance": 0.68, "fcp": "3.6s", "lcp": "4.6s", "tbt": "240ms", "speedIndex": "5.5s", "tti": "9.4s", "scriptEvaluationMs": 3184.2 },
-        "after_devtools": { "performance": 0.73, "fcp": "3.4s", "lcp": "4.5s", "tbt": "80ms", "speedIndex": "5.4s", "tti": "9.4s", "scriptEvaluationMs": 2950.2 },
+        "before_devtools": {
+          "performance": 0.68,
+          "fcp": "3.6s",
+          "lcp": "4.6s",
+          "tbt": "240ms",
+          "speedIndex": "5.5s",
+          "tti": "9.4s",
+          "scriptEvaluationMs": 3184.2
+        },
+        "after_devtools": {
+          "performance": 0.73,
+          "fcp": "3.4s",
+          "lcp": "4.5s",
+          "tbt": "80ms",
+          "speedIndex": "5.4s",
+          "tti": "9.4s",
+          "scriptEvaluationMs": 2950.2
+        },
         "verdict": "Real, confirmed improvement. TBT (the metric that best tracks perceived jank/input-responsiveness) dropped 240ms->80ms, a 67% reduction. Perf score 0.68->0.73. Script Evaluation long-task time down ~234ms. LCP/FCP/Speed Index only marginally better since P1 doesn't reduce total work, just unblocks the thread during it. TTI unchanged - likely gated by other costs (React/MUI mount, below-fold section code) not yet touched, which is exactly what P3 targets."
       }
     },
@@ -51,8 +99,24 @@
         "implementation": "Gene vetoed disabling antialias (wants to keep visual quality), so only (b) and (c) landed: devicePixelRatio capped at 1.5 (was 2) below 900px width, sphere segments 40x40->20x20, orbit line segments 256->96, both gated on the same isSmall = window.innerWidth < 900 check (re-evaluated on every effect rerun, which already happens on a mobile/desktop tuning-profile swap).",
         "visualRegression": "None at either breakpoint, confirmed via screenshot at 390x844 and 1440x900.",
         "measurementMethod": "Same lighthouse@12.8.2 --throttling-method=devtools mobile method as P1, isolated via git stash push/pop on OrbitalSystem.tsx.",
-        "before_devtools": { "performance": 0.73, "fcp": "3.4s", "lcp": "4.5s", "tbt": "80ms", "speedIndex": "5.4s", "tti": "9.4s", "scriptEvaluationMs": 2950.2 },
-        "after_devtools": { "performance": 0.73, "fcp": "3.5s", "lcp": "4.6s", "tbt": "80ms", "speedIndex": "5.5s", "tti": "9.4s", "scriptEvaluationMs": 3091.2 },
+        "before_devtools": {
+          "performance": 0.73,
+          "fcp": "3.4s",
+          "lcp": "4.5s",
+          "tbt": "80ms",
+          "speedIndex": "5.4s",
+          "tti": "9.4s",
+          "scriptEvaluationMs": 2950.2
+        },
+        "after_devtools": {
+          "performance": 0.73,
+          "fcp": "3.5s",
+          "lcp": "4.6s",
+          "tbt": "80ms",
+          "speedIndex": "5.5s",
+          "tti": "9.4s",
+          "scriptEvaluationMs": 3091.2
+        },
         "verdict": "Flat on Lighthouse's load-time score, as expected and explained to Gene up front: this item targets STEADY-STATE per-frame render cost (scroll/idle smoothness), not initial load, which Lighthouse's audit doesn't measure. Math-based expected win: DPR 3->1.5 is ~4x fewer pixels shaded, sphere segments 40x40->20x20 is ~4x fewer triangles per planet (x6 planets), orbit segments 256->96 is ~2.7x fewer vertices per orbit (x6 orbits). Gene confirmed '還可以' (decent/OK) after testing on his real phone via the deployed push - accepted without further tuning.",
         "regressionFoundLater": "During WF-round testing, Gene noticed his own portrait looking softer on his phone. The DPR cap was renderer-wide, and the portrait Sprite is drawn inside that same WebGL canvas (not a separate DOM <img>), so capping to 1.5 downscaled the portrait along with the fogged/blurred orbit furniture the cap was actually aimed at. Reverted the DPR part of P2 back to capping at 2 on all breakpoints (commit a386df6) - a face is scrutinised for sharpness in a way decorative elements aren't. The segment-count reduction (sphere/orbit-line triangle counts) is untouched, since that doesn't touch the portrait at all."
       }
@@ -243,7 +307,8 @@
         "implementation": "ExperienceSection.tsx's isMobile branch replaced entirely (ExpandMoreIcon import removed, now unused). List rows are real <button> elements (aria-pressed, aria-controls pointing at the panel) for native keyboard accessibility, which the accordion version also had but the desktop timeline items still don't. Detail panel reuses the desktop panel's exact AnimatePresence crossfade (opacity + small y-shift, mode='wait'), plus contain:layout style as a small extra safety margin.",
         "verification": "Screenshot confirms all 5 rows render at once (no expand/collapse), tapping a row highlights it and swaps the panel's description with zero row movement; functional check confirms the correct description text renders after tapping a specific row (3rd row -> matching description substring).",
         "verdict": "Pending Gene's re-test - this is the graceful exit from the accordion-optimization loop this investigation kept returning to: rather than a config/JS fix, the interaction itself no longer does the operation (resize-and-push-siblings) that was the source of the cost, so there should be structurally nothing left to reflow on tap. Desktop untouched per Gene's explicit ask.",
-        "followUp": "Gene flagged a real UX gap in WF11's layout: tapping a row near the top of the list leaves its description far below, off the bottom of a short viewport - the panel always sits after the WHOLE list regardless of which row is active. Considered an in-place popover anchored directly under the tapped row (visually tighter) but caught a real flaw before implementing: a long enough description would cover the rows below it, either blocking taps on them or (if those rows are z-indexed above it to stay tappable) rendering the popover as awkward slivers behind them. Kept the simple list+single-panel structure (no overlap/z-index complexity) and added scrollIntoView({block:'nearest'}) on the panel, fired from the row-select handler - only scrolls the minimum needed to reveal it (no-op if already visible), a native smooth scroll rather than a layout operation. Verified via Puppeteer on a 700px-tall viewport: panel goes from fully off-screen (top 559px/bottom 919px) to fully visible (top 339px/bottom 699.7px) after tapping the first row. Commit 2ea01a1."
+        "followUp": "Gene flagged a real UX gap in WF11's layout: tapping a row near the top of the list leaves its description far below, off the bottom of a short viewport - the panel always sits after the WHOLE list regardless of which row is active. Considered an in-place popover anchored directly under the tapped row (visually tighter) but caught a real flaw before implementing: a long enough description would cover the rows below it, either blocking taps on them or (if those rows are z-indexed above it to stay tappable) rendering the popover as awkward slivers behind them. Kept the simple list+single-panel structure (no overlap/z-index complexity) and added scrollIntoView({block:'nearest'}) on the panel, fired from the row-select handler - only scrolls the minimum needed to reveal it (no-op if already visible), a native smooth scroll rather than a layout operation. Verified via Puppeteer on a 700px-tall viewport: panel goes from fully off-screen (top 559px/bottom 919px) to fully visible (top 339px/bottom 699.7px) after tapping the first row. Commit 2ea01a1.",
+        "dialogFollowUp": "Gene asked whether a popup/Dialog would be even better than the auto-scroll fix. Agreed - switched the mobile detail target from the inline scrollIntoView panel to a centred Dialog reusing the exact pattern already proven in the Work sections project detail (dimmed backdrop, close button, PaperProps styling). Sidesteps scroll-position dependency entirely rather than mitigating it - the dialog appears in the same place regardless of which row was tapped, and open/close is a compositor-only fade, cheaper than the scroll animation it replaces. Verified via Puppeteer: tapping the last row (previously worst case for scroll distance) opens the dialog with correct content; close button works. Commit 127bdb5."
       }
     }
   ],
