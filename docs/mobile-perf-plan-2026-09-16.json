@@ -230,6 +230,20 @@
         "verification": "Puppeteer: the dashed-ring element's computed animationPlayState is 'running' while on the hero, 'paused' after scrolling to Experience.",
         "verdict": "This closes out every currently-known always-on animation source in the codebase - there is nothing else left in this specific bug category (off-screen elements/timers that don't pause) to find via more sweeping. If Experience is STILL janky after this, the honest next step is not another JS/CSS audit of the hero, but either (a) a real device trace scoped to confirm whether ANY background activity remains at all during the tap (if none does, the accordion's own reflow cost - already characterized as low-CPU/tap-correlated in the WF8 trace - is what's left, meaning further improvement requires changing the reveal design itself, e.g. an overlay expand that doesn't push sibling content, not another optimization of the current push-down approach), or (b) accepting that 'still a bit janky' on this specific device/interaction may be close to the practical floor for a CSS box-height transition and the P5 low-end-device-fallback idea becomes the more honest lever than continuing to chase this one interaction."
       }
+    },
+    {
+      "priority": "discovered mid-session, not in original P1-P5",
+      "id": "WF11",
+      "name": "Round 11: mobile Experience redesigned from push-down accordion to list+detail panel",
+      "why": "Gene tested WF10 and it was STILL janky - confirming the WF10 verdict's option (a): the accordion's own box-height reflow is the remaining cost, and no amount of JS/CSS optimisation of the height-animation mechanism removes it (JS-measured height, then grid-template-rows, then contain:layout were all tried across this investigation). Gene: '那手機版的改設計方式吧 網頁版的維持即可 挑一個UI UX好的呈現方式' (change the mobile design, keep desktop as-is, pick a good UI/UX pattern) - agreeing to the design-change option rather than continuing to chase the accordion mechanism.",
+      "how": "Reused the desktop layout's own pattern (Grid: timeline-dot list + a separate fixed detail Paper that crossfades content via AnimatePresence) instead of inventing a new interaction - that pattern has been in this codebase since before this investigation and was never reported as janky, because it never resizes any box in response to a tap. Restacked it vertically for mobile: a compact list of rows (icon + title/company/period) where the active one only gets a border/background highlight (compositor-only, no layout impact), plus one persistent detail panel below the list whose content crossfades on tap. No row in the list ever changes height or pushes anything.",
+      "effort": "~0.5 day",
+      "status": "done-pending-device-confirmation",
+      "result": {
+        "implementation": "ExperienceSection.tsx's isMobile branch replaced entirely (ExpandMoreIcon import removed, now unused). List rows are real <button> elements (aria-pressed, aria-controls pointing at the panel) for native keyboard accessibility, which the accordion version also had but the desktop timeline items still don't. Detail panel reuses the desktop panel's exact AnimatePresence crossfade (opacity + small y-shift, mode='wait'), plus contain:layout style as a small extra safety margin.",
+        "verification": "Screenshot confirms all 5 rows render at once (no expand/collapse), tapping a row highlights it and swaps the panel's description with zero row movement; functional check confirms the correct description text renders after tapping a specific row (3rd row -> matching description substring).",
+        "verdict": "Pending Gene's re-test - this is the graceful exit from the accordion-optimization loop this investigation kept returning to: rather than a config/JS fix, the interaction itself no longer does the operation (resize-and-push-siblings) that was the source of the cost, so there should be structurally nothing left to reflow on tap. Desktop untouched per Gene's explicit ask."
+      }
     }
   ],
   "openQuestions": [
