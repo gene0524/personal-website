@@ -123,10 +123,14 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
     const isSmall = window.innerWidth < 900;
 
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'low-power' });
-    // Capped lower on mobile: WebGL cost scales with pixelRatio^2, so 3 -> 1.5
-    // on a DPR-3 phone is a 4x reduction in pixels rendered. The scene is
-    // already fogged/blurred enough that the softer edge isn't perceptible.
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, isSmall ? 1.5 : 2);
+    // Reverted the mobile-only 1.5 cap tried here - Gene noticed his own
+    // portrait looking softer on his phone. The portrait is a Sprite drawn
+    // INSIDE this same WebGL canvas (not a separate DOM <img>), so capping
+    // renderer-wide pixelRatio downscales it along with everything else -
+    // unlike the fogged/blurred orbit furniture, a face is the one thing in
+    // frame people actually scrutinise for sharpness. Capped at 2 everywhere
+    // (matches the pre-P2 default; most phones report devicePixelRatio 2-3).
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
     renderer.setPixelRatio(pixelRatio);
     renderer.setClearColor(0x000000, 0);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
