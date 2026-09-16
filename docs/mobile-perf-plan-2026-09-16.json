@@ -202,6 +202,20 @@
         "verification": "Particle visuals confirmed via cropped screenshots (lines/dots now visually distinct from orbit lines, no console/page errors). Experience: screenshot confirms expand/collapse still works correctly with containment added. Travel prefetch: verified via Puppeteer against a production preview build that the TravelSection chunk request fires ~295ms after page load with zero scrolling toward it (previously would only fire once within 2800px of the placeholder).",
         "verdict": "Pending Gene's device re-test on both. Honest caveat carried over from the whole investigation: no local reproduction of real phone GPU/layout/network cost, so the `contain` fix in particular is a reasoned attempt (real technique, correctly targeted at the trace's actual signature) rather than a locally-measured win - if it's still not enough, the next lever is changing the reveal itself (e.g. an overlay expand that doesn't push sibling content) rather than another CSS tweak on the current push-down design."
       }
+    },
+    {
+      "priority": "discovered mid-session, not in original P1-P5",
+      "id": "WF9",
+      "name": "Round 9: the actual 3rd background-runs-forever bug - the hero typewriter",
+      "why": "Gene re-recorded Experience after WF8's contain:layout fix and it looked WORSE, not better - Style/Layout/JS activity spanning the whole ~7s recording again, not correlated with the two visible tap clusters, unlike the genuinely-improved trace from the round before. Something regressed or was never fixed.",
+      "how": "Given the pattern (continuous low-level activity, not tap-correlated) matched the signature of the two previously-found off-screen-doesn't-pause bugs exactly, checked the one remaining always-on system in the hero: useTypewriter()'s setTimeout chain (types/deletes through ROLES on an infinite loop). Verified via Puppeteer - polled the typed-role text every 400ms while scrolled to Experience and it kept changing ('Software Engineer' -> 'Softwar' -> 'T'...). WF6 had already isolated this into its own TypewriterRole component to fix a *different* problem (full-HeroSection re-render on every keystroke), but that fix only narrowed the re-render's blast radius - it never added visibility gating, so the setTimeout chain kept firing every 40-95ms forever regardless of scroll position, on every section of the page.",
+      "effort": "~0.25 day once found",
+      "status": "done-pending-device-confirmation",
+      "result": {
+        "implementation": "Added an IntersectionObserver on TypewriterRole's own wrapper Box (same pattern as the OrbitalSystem and Work-filmstrip fixes), passed its visibility into useTypewriter's existing `enabled` parameter (reuses the early-return already there for reducedMotion, no new branching inside the hook). Also paused the blink-cursor's CSS animation via the same visibility flag (animationPlayState).",
+        "verification": "Puppeteer: typed text freezes immediately on scrolling to Experience and stays frozen (5 samples, all identical); still types/pauses/deletes normally when visible on the hero (verified against the existing verify-typewriter.mjs script). Typecheck clean.",
+        "verdict": "Pending Gene's re-test - ideally another Web Inspector recording of Experience to confirm this was actually the remaining cause, since WF8's contain:layout change may have been masking rather than fixing anything (its trace looked good by coincidence, or genuinely helped but got outweighed by the typewriter running the whole time in both recordings). Lesson repeated a third time this investigation: 'off-screen doesn't automatically mean paused' is the single most recurring bug category here (OrbitalSystem poll, Work breathing ring, now the typewriter) - worth an explicit check for this pattern before believing any future 'still janky' report is something new."
+      }
     }
   ],
   "openQuestions": [
