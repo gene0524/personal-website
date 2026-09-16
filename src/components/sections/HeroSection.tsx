@@ -66,6 +66,58 @@ const useTypewriter = (enabled: boolean) => {
   return text;
 };
 
+// Isolated into its own component so the ~every-40-95ms setState driving the
+// typing animation only re-renders this small subtree, not all of
+// HeroSection (portrait, OrbitalSystem/ParticleNetwork wrappers, buttons,
+// social links...) on every keystroke - that full-tree re-render, competing
+// with the hero's other animation systems right as they're warming up on
+// load, was the stutter Gene felt specifically while the role text typed.
+const TypewriterRole: React.FC<{ reducedMotion: boolean }> = ({ reducedMotion }) => {
+  const typedRole = useTypewriter(!reducedMotion);
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        mb: { xs: 3, md: 4 },
+        minHeight: { xs: '1.8rem', md: '2.2rem' },
+      }}
+    >
+      <Typography
+        component="p"
+        color="primary"
+        aria-live="off"
+        sx={{
+          fontSize: { xs: '1.1rem', md: '1.5rem' },
+          fontWeight: 500,
+          fontFamily: FONT_MONO,
+          letterSpacing: '0.02em',
+          m: 0,
+        }}
+      >
+        {typedRole}
+      </Typography>
+      {!reducedMotion && (
+        <Box
+          aria-hidden="true"
+          sx={{
+            width: '2px',
+            height: { xs: '1.1rem', md: '1.5rem' },
+            backgroundColor: 'primary.main',
+            ml: 0.5,
+            flexShrink: 0,
+            animation: 'blink 1s step-end infinite',
+            '@keyframes blink': {
+              '0%, 100%': { opacity: 1 },
+              '50%': { opacity: 0 },
+            },
+          }}
+        />
+      )}
+    </Box>
+  );
+};
+
 const scrollTo = (id: string) =>
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -94,7 +146,6 @@ const bleedSx = {
 
 const HeroSection: React.FC = () => {
   const reducedMotion = useReducedMotion();
-  const typedRole = useTypewriter(!reducedMotion);
   const theme = useTheme();
   const sphereReady = useAfterFirstPaint();
   const portraitRef = useRef<HTMLDivElement>(null);
@@ -218,46 +269,7 @@ const HeroSection: React.FC = () => {
               </Typography>
 
               {/* Typewriter row */}
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  mb: { xs: 3, md: 4 },
-                  minHeight: { xs: '1.8rem', md: '2.2rem' },
-                }}
-              >
-                <Typography
-                  component="p"
-                  color="primary"
-                  aria-live="off"
-                  sx={{
-                    fontSize: { xs: '1.1rem', md: '1.5rem' },
-                    fontWeight: 500,
-                    fontFamily: FONT_MONO,
-                    letterSpacing: '0.02em',
-                    m: 0,
-                  }}
-                >
-                  {typedRole}
-                </Typography>
-                {!reducedMotion && (
-                  <Box
-                    aria-hidden="true"
-                    sx={{
-                      width: '2px',
-                      height: { xs: '1.1rem', md: '1.5rem' },
-                      backgroundColor: 'primary.main',
-                      ml: 0.5,
-                      flexShrink: 0,
-                      animation: 'blink 1s step-end infinite',
-                      '@keyframes blink': {
-                        '0%, 100%': { opacity: 1 },
-                        '50%': { opacity: 0 },
-                      },
-                    }}
-                  />
-                )}
-              </Box>
+              <TypewriterRole reducedMotion={!!reducedMotion} />
 
               <Typography
                 variant="body1"
