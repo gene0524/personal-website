@@ -57,6 +57,11 @@ const CARD_FLEX_SX = { xs: `0 0 ${CARD_W.xs}`, sm: `0 0 ${CARD_W.sm}`, md: `0 0 
 const TRACK_PX_SX = { xs: `calc(50% - (${CARD_W.xs}) / 2)`, sm: `calc(50% - (${CARD_W.sm}) / 2)`, md: `calc(50% - (${CARD_W.md}) / 2)` };
 const FILMSTRIP_ITEM = '[data-filmstrip-item]';
 const GLASS_STROKE = '1px solid rgba(255,255,255,0.14)';
+// Measured: toggling backdrop-filter on/off during the scroll (via a
+// data-scrolling attribute) made jank WORSE - forcing the browser to
+// tear down/rebuild the GPU compositing layer mid-slide costs more than
+// just leaving it blurred, up to 1400ms frame gaps vs 400ms unthrottled.
+// Static removal below 900px avoids that churn entirely instead.
 const PILL_SX = {
   fontFamily: FONT_MONO,
   fontSize: '0.8rem',
@@ -65,9 +70,9 @@ const PILL_SX = {
   px: 1.25,
   py: 0.75,
   borderRadius: '999px',
-  backgroundColor: 'rgba(7,9,15,0.6)',
-  backdropFilter: 'blur(10px)',
-  WebkitBackdropFilter: 'blur(10px)',
+  backgroundColor: { xs: 'rgba(7,9,15,0.82)', md: 'rgba(7,9,15,0.6)' },
+  backdropFilter: { xs: 'none', md: 'blur(10px)' },
+  WebkitBackdropFilter: { xs: 'none', md: 'blur(10px)' },
   border: GLASS_STROKE,
   color: 'text.primary',
   whiteSpace: 'nowrap',
@@ -220,9 +225,9 @@ const StageCard: React.FC<StageCardProps> = ({ project, index, total, trackRef, 
             overflow: 'hidden',
             cursor: 'pointer',
             outline: 'none',
-            backgroundColor: 'rgba(11,15,24,0.78)',
-            backdropFilter: 'blur(22px) saturate(160%)',
-            WebkitBackdropFilter: 'blur(22px) saturate(160%)',
+            backgroundColor: { xs: 'rgba(11,15,24,0.92)', md: 'rgba(11,15,24,0.78)' },
+            backdropFilter: { xs: 'none', md: 'blur(22px) saturate(160%)' },
+            WebkitBackdropFilter: { xs: 'none', md: 'blur(22px) saturate(160%)' },
             border: GLASS_STROKE,
             boxShadow: '0 1px 0 rgba(255,255,255,0.12) inset, 0 24px 60px rgba(0,0,0,0.45)',
             transition: 'border-color 0.3s',
@@ -364,11 +369,25 @@ const Filmstrip: React.FC<FilmstripProps> = ({ items, onOpen, onActiveChange, re
     const t = trackRef.current;
     if (!t) return;
     updateScroll();
-    t.addEventListener('scroll', updateScroll, { passive: true });
+    // Native smooth-scroll (the arrow buttons) fires many 'scroll' events per
+    // animation frame; updateScroll re-queries all cards' offsetLeft, so
+    // running it unthrottled meant several DOM reads/reflow per frame during
+    // the slide. Coalescing to at most one per rAF cuts that back to the
+    // frame rate without changing the result.
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        updateScroll();
+      });
+    };
+    t.addEventListener('scroll', onScroll, { passive: true });
     const ro = new ResizeObserver(updateScroll);
     ro.observe(t);
     return () => {
-      t.removeEventListener('scroll', updateScroll);
+      t.removeEventListener('scroll', onScroll);
+      if (raf) cancelAnimationFrame(raf);
       ro.disconnect();
     };
   }, [updateScroll]);
