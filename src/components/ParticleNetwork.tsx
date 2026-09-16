@@ -71,11 +71,21 @@ const ParticleNetwork = () => {
     let particles: Particle[] = [];
     let lastW = 0;
     let lastH = 0;
+    // draw()'s per-particle boundary checks used to call canvas.offsetWidth/
+    // offsetHeight (cw()/ch()) directly - up to ~100 layout-dependent reads
+    // every single animation frame, for as long as the hero canvas is in
+    // view. The size only actually changes on resize, so it's cached here
+    // (from the ResizeObserver-driven measurement below) and draw() reads
+    // these instead of touching layout at all.
+    let boundsW = 0;
+    let boundsH = 0;
     const seedOrRescale = () => {
       const dpr = window.devicePixelRatio || 1;
       const w = cw();
       const h = ch();
       if (w < 1 || h < 1) return; // not laid out yet
+      boundsW = w;
+      boundsH = h;
       canvas.width = w * dpr;
       canvas.height = h * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -105,7 +115,7 @@ const ParticleNetwork = () => {
     resizeObserver.observe(canvas);
 
     const draw = () => {
-      ctx.clearRect(0, 0, cw(), ch());
+      ctx.clearRect(0, 0, boundsW, boundsH);
 
       const mx = mouseRef.current.x;
       const my = mouseRef.current.y;
@@ -158,9 +168,9 @@ const ParticleNetwork = () => {
         p.y += p.vy;
 
         if (p.x < 0) { p.x = 0; p.vx *= -0.8; }
-        if (p.x > cw()) { p.x = cw(); p.vx *= -0.8; }
+        if (p.x > boundsW) { p.x = boundsW; p.vx *= -0.8; }
         if (p.y < 0) { p.y = 0; p.vy *= -0.8; }
-        if (p.y > ch()) { p.y = ch(); p.vy *= -0.8; }
+        if (p.y > boundsH) { p.y = boundsH; p.vy *= -0.8; }
       }
 
       // Draw edges — faint blue-white

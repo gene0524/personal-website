@@ -79,6 +79,18 @@ const orbitPoint = (a: number, e: number, theta: number, out: THREE.Vector3) => 
   return out.set(r * Math.cos(theta), 0, r * Math.sin(theta));
 };
 
+// The app's actual scroll container is a nested Box (overflowY: auto in
+// App.tsx), not window/document - walk up to find it so the anchor-sync
+// scroll listener fires on real scrolling instead of never firing.
+const findScrollParent = (el: HTMLElement | null): HTMLElement | Window => {
+  let node = el?.parentElement ?? null;
+  while (node) {
+    if (/(auto|scroll)/.test(getComputedStyle(node).overflowY)) return node;
+    node = node.parentElement;
+  }
+  return window;
+};
+
 const OrbitalSystem = (props: OrbitalSystemProps) => {
   const { accent, background, reducedMotion, anchorRef, portraitSrc, onReady } = props;
   // Individual primitive values (not the merged object, which is a fresh
@@ -260,7 +272,11 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
     let parallaxX = 0;
     let parallaxY = 0;
     let announced = false;
-    let frameCount = 0;
+    // The portrait itself plays a scale-in entrance (HeroSection: 0.8s
+    // duration + 0.3s delay), so syncAnchor needs to track it moving for
+    // that brief window after mount - after which it only needs to react to
+    // actual scroll/resize (wired up below), not run every frame forever.
+    const entranceSyncUntil = performance.now() + 1500;
 
     const render = () => {
       parallaxX += (targetX - parallaxX) * 0.04;
@@ -285,8 +301,7 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
       const dt = last ? Math.min((now - last) / 1000, 0.05) : 0;
       last = now;
       time += dt;
-      // The portrait animates in and the layout can shift; keep the sun on it
-      if (++frameCount % 20 === 0) syncAnchor();
+      if (now < entranceSyncUntil) syncAnchor();
       bodies.forEach(b => {
         const k = 1 + b.e * Math.cos(b.theta);
         b.theta = (b.theta + dt * b.speed * k * k) % (Math.PI * 2);
@@ -314,6 +329,26 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
       targetX = (e.clientY / window.innerHeight - 0.5) * 0.06;
     };
     const onVisibility = () => (document.hidden ? stop() : start());
+
+    // Previously syncAnchor() ran unconditionally every 20 animation frames
+    // (~3x/sec) for as long as any sliver of the hero was in view, including
+    // while sitting idle on a section below it - two getBoundingClientRect()
+    // reads that force a full-page style/layout flush, on a fixed timer
+    // completely decoupled from whether anything could have actually moved.
+    // A real on-device trace (Safari Web Inspector) showed continuous
+    // Layout/Recalculate-Style cost outlasting the actual touch gesture by
+    // several seconds, which this unconditional poll explains. Now
+    // scroll/resize-triggered only - rAF-coalesced, same pattern as the
+    // filmstrip fix - so the cost is zero while nothing is scrolling.
+    let scrollRaf = 0;
+    const onScroll = () => {
+      if (scrollRaf) return;
+      scrollRaf = requestAnimationFrame(() => {
+        scrollRaf = 0;
+        syncAnchor();
+      });
+    };
+    const scrollParent = findScrollParent(host);
 
     let wired = false;
     let ro: ResizeObserver | null = null;
@@ -420,6 +455,7 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
       io.observe(host);
       window.addEventListener('pointermove', onPointerMove, { passive: true });
       document.addEventListener('visibilitychange', onVisibility);
+      scrollParent.addEventListener('scroll', onScroll, { passive: true });
       wired = true;
       resize();
       start();
@@ -434,7 +470,9 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
         io?.disconnect();
         window.removeEventListener('pointermove', onPointerMove);
         document.removeEventListener('visibilitychange', onVisibility);
+        scrollParent.removeEventListener('scroll', onScroll);
       }
+      if (scrollRaf) cancelAnimationFrame(scrollRaf);
       disposables.forEach(d => d.dispose());
       renderer.dispose();
     };
