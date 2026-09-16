@@ -199,7 +199,14 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
       // Mask the square photo into a circle once, on a canvas, instead of
       // shipping a separate ring mesh to fake the edge.
       const image = loaded.image as HTMLImageElement;
-      const size = 512;
+      // Matches the source photo's native 900x900 - the portrait displays up
+      // to 300 CSS px (HeroSection) and phones commonly report devicePixelRatio
+      // up to 3, so 300*3=900 physical px is genuinely needed for full
+      // sharpness. This was hardcoded to 512 before, independently of the P2
+      // DPR-cap regression that got reverted - downsampling to 512 then
+      // upsampling back up on a high-DPR screen was softening the portrait
+      // on its own, source resolution allowing.
+      const size = Math.min(900, Math.max(image.width, image.height));
       const c = document.createElement('canvas');
       c.width = c.height = size;
       const g = c.getContext('2d')!;

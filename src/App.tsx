@@ -30,7 +30,7 @@ const DeferredTravelSection: React.FC = () => {
         setShouldLoad(true);
         io.disconnect();
       }
-    }, { rootMargin: '1500px 0px' });
+    }, { rootMargin: '2800px 0px' });
     io.observe(el);
     return () => io.disconnect();
   }, []);

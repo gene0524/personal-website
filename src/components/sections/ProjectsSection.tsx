@@ -141,8 +141,9 @@ const StageCard: React.FC<StageCardProps> = ({ project, index, total, trackRef, 
   const turn = useTransform(scrollXProgress, [0.2, 0.5, 0.8], reducedMotion ? [0, 0, 0] : [-18, 0, 18]);
   const grayscale = useTransform(active, [0, 1], [0.75, 0]);
   const brightness = useTransform(active, [0, 1], [0.5, 1]);
-  // Capped so light screenshots don't blow out into a white halo
-  const glowOpacity = useTransform(active, [0, 1], [0, 0.55]);
+  // Capped so light screenshots don't blow out into a white halo - lower
+  // still on mobile, where Gene asked for a noticeably smaller/dimmer glow.
+  const glowOpacity = useTransform(active, [0, 1], [0, isSmall ? 0.28 : 0.55]);
   const filter = useMotionTemplate`grayscale(${grayscale}) brightness(${brightness})`;
 
   const spring = { stiffness: 220, damping: 24, mass: 0.6 };
@@ -179,10 +180,10 @@ const StageCard: React.FC<StageCardProps> = ({ project, index, total, trackRef, 
           style={{
             opacity: glowOpacity,
             position: 'absolute',
-            inset: '-6% -8%',
+            inset: isSmall ? '-1% -2%' : '-6% -8%',
             zIndex: 0,
             borderRadius: 40,
-            filter: `blur(${isSmall ? 20 : 48}px) saturate(1.7) brightness(0.8)`,
+            filter: `blur(${isSmall ? 14 : 48}px) saturate(1.7) brightness(0.8)`,
             background: img
               ? `url(${img}) center / cover no-repeat`
               : `radial-gradient(60% 60% at 30% 30%, ${alpha(accent, 0.5)}, transparent 70%)`,
