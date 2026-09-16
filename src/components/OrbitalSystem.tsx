@@ -86,7 +86,7 @@ const PARTICLE_VERT = /* glsl */ `
   void main() {
     vBoost = aBoost;
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
-    gl_PointSize = aRadius * (2.0 + aBoost * 1.6) * uPixelRatio;
+    gl_PointSize = aRadius * (2.6 + aBoost * 1.8) * uPixelRatio;
     gl_Position = projectionMatrix * mv;
   }
 `;
@@ -95,7 +95,7 @@ const PARTICLE_FRAG = /* glsl */ `
   varying float vBoost;
   void main() {
     float a = texture2D(uMap, gl_PointCoord).a;
-    gl_FragColor = vec4(1.0, 1.0, 1.0, a * mix(0.55, 0.95, vBoost));
+    gl_FragColor = vec4(1.0, 1.0, 1.0, a * mix(0.75, 1.0, vBoost));
   }
 `;
 // A second, larger, blue-tinted, low-opacity layer sharing the same
@@ -112,7 +112,7 @@ const PARTICLE_GLOW_VERT = /* glsl */ `
   void main() {
     vBoost = aBoost;
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
-    gl_PointSize = aRadius * (7.0 + aBoost * 3.0) * uPixelRatio;
+    gl_PointSize = aRadius * (8.0 + aBoost * 3.5) * uPixelRatio;
     gl_Position = projectionMatrix * mv;
   }
 `;
@@ -121,7 +121,7 @@ const PARTICLE_GLOW_FRAG = /* glsl */ `
   varying float vBoost;
   void main() {
     float a = texture2D(uMap, gl_PointCoord).a;
-    gl_FragColor = vec4(0.4, 0.7, 1.0, a * mix(0.16, 0.4, vBoost));
+    gl_FragColor = vec4(0.45, 0.72, 1.0, a * mix(0.24, 0.5, vBoost));
   }
 `;
 // Connection lines used a flat, uniform-opacity LineBasicMaterial that read
@@ -363,6 +363,13 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
     let mouseY = -9999;
     let mousePrevX = -9999;
     let mousePrevY = -9999;
+    // Reused across frames (not reallocated) to avoid per-frame GC pressure:
+    // the physics loop below records which pairs qualified as a connection
+    // (dist < CONNECT_DIST) while it's already computing that pair's
+    // distance for repulsion, instead of a second full pairwise sweep
+    // recomputing the same distances just to find connections.
+    const connCandidateI = new Int16Array(MAX_LINE_SEGMENTS);
+    const connCandidateJ = new Int16Array(MAX_LINE_SEGMENTS);
 
     const halfHeight = FOCUS_DISTANCE * Math.tan((FOV / 2) * (Math.PI / 180));
     const syncAnchor = () => {
@@ -436,6 +443,7 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
       const mvy = mouseY - mousePrevY;
       mousePrevX = mouseX;
       mousePrevY = mouseY;
+      let connCount = 0;
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
         const cdx = mouseX - p.x;
@@ -451,6 +459,18 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
           const dx = p.x - q.x;
           const dy = p.y - q.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
+          // Recording connection candidates here (while dist is already
+          // computed for repulsion) instead of a second full pairwise sweep
+          // is the one thing that changes vs. the original 2D-canvas
+          // version: this dist is from BEFORE i/j move this frame, whereas
+          // the old two-loop version measured connections AFTER - at these
+          // speeds (max 1.4px/frame) the difference is sub-pixel and
+          // invisible, well within CONNECT_DIST's 100px threshold.
+          if (dist < CONNECT_DIST && connCount < MAX_LINE_SEGMENTS) {
+            connCandidateI[connCount] = i;
+            connCandidateJ[connCount] = j;
+            connCount++;
+          }
           if (dist < REPEL_DIST && dist > 0) {
             const force = ((REPEL_DIST - dist) / REPEL_DIST) * REPEL_FORCE;
             const fx = (dx / dist) * force;
@@ -489,29 +509,29 @@ const OrbitalSystem = (props: OrbitalSystemProps) => {
       boostAttr.needsUpdate = true;
       particlePoints.geometry.setDrawRange(0, particles.length);
 
+      // Connection candidates (pairs where dist < CONNECT_DIST) were already
+      // found above, in the same pass that computed each pair's distance
+      // for repulsion - this just writes the buffer for however many
+      // qualified, instead of a second O(n^2) sweep to rediscover them.
       const linePosAttr = particleLines.geometry.attributes.position as THREE.BufferAttribute;
       const lineAlphaAttr = particleLines.geometry.attributes.aAlpha as THREE.BufferAttribute;
-      let segCount = 0;
-      for (let i = 0; i < particles.length && segCount < MAX_LINE_SEGMENTS; i++) {
-        for (let j = i + 1; j < particles.length && segCount < MAX_LINE_SEGMENTS; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < CONNECT_DIST) {
-            const [ax, ay] = toPlane(particles[i].x, particles[i].y);
-            const [bx, by] = toPlane(particles[j].x, particles[j].y);
-            linePosAttr.setXYZ(segCount * 2, ax, ay, 0);
-            linePosAttr.setXYZ(segCount * 2 + 1, bx, by, 0);
-            const alpha = (1 - dist / CONNECT_DIST) * 0.5;
-            lineAlphaAttr.setX(segCount * 2, alpha);
-            lineAlphaAttr.setX(segCount * 2 + 1, alpha);
-            segCount++;
-          }
-        }
+      for (let c = 0; c < connCount; c++) {
+        const pi = particles[connCandidateI[c]];
+        const pj = particles[connCandidateJ[c]];
+        const dx = pi.x - pj.x;
+        const dy = pi.y - pj.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const [ax, ay] = toPlane(pi.x, pi.y);
+        const [bx, by] = toPlane(pj.x, pj.y);
+        linePosAttr.setXYZ(c * 2, ax, ay, 0);
+        linePosAttr.setXYZ(c * 2 + 1, bx, by, 0);
+        const alpha = Math.max(0, 1 - dist / CONNECT_DIST) * 0.5;
+        lineAlphaAttr.setX(c * 2, alpha);
+        lineAlphaAttr.setX(c * 2 + 1, alpha);
       }
       linePosAttr.needsUpdate = true;
       lineAlphaAttr.needsUpdate = true;
-      particleLines.geometry.setDrawRange(0, segCount * 2);
+      particleLines.geometry.setDrawRange(0, connCount * 2);
     };
 
     let frame = 0;
