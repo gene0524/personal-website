@@ -20,6 +20,7 @@ import {
   useMotionValue,
   useSpring,
   useMotionTemplate,
+  useMotionValueEvent,
 } from 'framer-motion';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import ArticleIcon from '@mui/icons-material/Article';
@@ -156,6 +157,32 @@ const StageCard: React.FC<StageCardProps> = ({ project, index, total, trackRef, 
   const lightY = useSpring(useMotionValue(30), spring);
   const sheen = useMotionTemplate`radial-gradient(520px circle at ${lightX}% ${lightY}%, rgba(255,255,255,0.16), rgba(255,255,255,0.03) 40%, transparent 62%)`;
 
+  // On-device trace at the Experience/Work scroll boundary showed a single
+  // ~800ms "Composite" span and CPU up to 66.7% - GPU layer-compositing
+  // cost, not layout/style. All 11 cards track scroll continuously and
+  // drive transform+filter every frame regardless of visibility, and each
+  // becomes its own persistent compositing layer purely by having a
+  // MotionValue bound to style, independent of whether that value is
+  // currently changing. Cards outside a generous +-window of the visual-
+  // change range [0.3,0.7] get plain numbers/strings instead of MotionValue
+  // objects in `style`, so Framer has nothing live to keep a layer for.
+  // Window is wider than the visual range so the swap happens while the
+  // card is already fully at rest (scale 0.84, grayscale 0.75) - same
+  // numbers either way - instead of mid-transition, which is what would
+  // cause a visible pop.
+  const [isNear, setIsNear] = useState(true);
+  useMotionValueEvent(scrollXProgress, 'change', v => {
+    const next = v > 0.15 && v < 0.85;
+    setIsNear(prev => (prev === next ? prev : next));
+  });
+  const REST_SCALE = 0.84;
+  const REST_FILTER = 'grayscale(0.75) brightness(0.5)';
+  // turn's own domain [0.2,0.8] is narrower than the isNear window
+  // [0.15,0.85], so by the time a card freezes it's already clamped to
+  // exactly -18 or +18, not still moving - which side just depends on
+  // whether it hasn't reached centre yet or already passed it.
+  const restRotateY = reducedMotion ? 0 : (scrollXProgress.get() < 0.5 ? -18 : 18);
+
   const isCentred = () => Math.abs(scrollXProgress.get() - 0.5) < 0.08;
   const activate = () => {
     if (isCentred()) onOpen(project);
@@ -172,13 +199,15 @@ const StageCard: React.FC<StageCardProps> = ({ project, index, total, trackRef, 
       sx={{ flex: CARD_FLEX_SX, minWidth: 0, scrollSnapAlign: 'center', position: 'relative' }}
     >
       <motion.div
-        style={{ scale, rotateY, rotateX: tiltX, filter, transformPerspective: 1400, height: '100%', position: 'relative' }}
+        style={isNear
+          ? { scale, rotateY, rotateX: tiltX, filter, transformPerspective: 1400, height: '100%', position: 'relative' }
+          : { scale: REST_SCALE, rotateY: restRotateY, rotateX: 0, filter: REST_FILTER, transformPerspective: 1400, height: '100%', position: 'relative' }}
       >
         {/* Ambient light: the screenshot itself, blurred, behind the glass */}
         <motion.div
           aria-hidden="true"
           style={{
-            opacity: glowOpacity,
+            opacity: isNear ? glowOpacity : 0,
             position: 'absolute',
             inset: isSmall ? '-1% -2%' : '-6% -8%',
             zIndex: 0,
@@ -191,7 +220,7 @@ const StageCard: React.FC<StageCardProps> = ({ project, index, total, trackRef, 
           }}
         />
         {/* Accent ring, breathing while the card is centred */}
-        <motion.div aria-hidden="true" style={{ opacity: active, position: 'absolute', inset: 0, zIndex: 0, borderRadius: 20, pointerEvents: 'none' }}>
+        <motion.div aria-hidden="true" style={{ opacity: isNear ? active : 0, position: 'absolute', inset: 0, zIndex: 0, borderRadius: 20, pointerEvents: 'none' }}>
           <Box
             sx={{
               position: 'absolute',
