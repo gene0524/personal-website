@@ -35,7 +35,12 @@ const ExperienceSection: React.FC = () => {
 
         {/* ── Mobile: accordion ─────────────────────────────────── */}
         {isMobile && (
-          <Box>
+          // contain:layout+style isolates this list's internal reflow (each
+          // tap resizing one item, pushing the ones below) from the rest of
+          // the page - the browser can skip checking whether anything
+          // outside this box needs to react, instead of walking back up
+          // through ancestors on every expand/collapse.
+          <Box sx={{ contain: 'layout style' }}>
             {experiences.map((exp, index) => {
               const IconComponent = exp.icon;
               const expanded = activeStep === index;

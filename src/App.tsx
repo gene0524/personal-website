@@ -22,6 +22,23 @@ const DeferredTravelSection: React.FC = () => {
   const placeholderRef = useRef<HTMLDivElement>(null);
   const [shouldLoad, setShouldLoad] = useState(false);
 
+  // A 2800px rootMargin gives plenty of lead time on a fast connection, but
+  // on real mobile networks the ~370KB gzipped chunk (react-globe.gl +
+  // topojson) can still lose the race if the visit scrolls straight there.
+  // Travel is 4 sections down, so there's typically many seconds of idle
+  // time before anyone reaches it regardless of scroll speed - prefetching
+  // the CHUNK on idle, decoupled from scroll position entirely, uses that
+  // time instead of gambling on a fixed pixel margin. This only warms the
+  // module cache; shouldLoad below still controls when it actually mounts
+  // and runs its setup.
+  useEffect(() => {
+    const idle = (window as unknown as { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
+    const id = idle
+      ? idle(() => { import('./components/sections/TravelSection'); })
+      : window.setTimeout(() => { import('./components/sections/TravelSection'); }, 2000);
+    return () => { if (!idle) window.clearTimeout(id); };
+  }, []);
+
   useEffect(() => {
     const el = placeholderRef.current;
     if (!el) return;
