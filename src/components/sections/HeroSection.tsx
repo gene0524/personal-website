@@ -69,6 +69,29 @@ const useTypewriter = (enabled: boolean) => {
 const scrollTo = (id: string) =>
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+// Both background layers (starfield + solar system) bleed this far past the
+// hero's own bottom edge into the top of the next section, instead of being
+// hard-clipped exactly at the section boundary. A mask fades them to nothing
+// well before the bleed ends, so it reads as an ambient dissolve rather than
+// a rectangle sitting on top of the next section's heading. The fade starts
+// a little INSIDE the hero itself (not right at the edge) so there's no
+// visible seam where "clipped" becomes "fading".
+const BLEED = { xs: 90, md: 200 } as const;
+// Stop 1: still fully opaque until 70px before the hero's own edge (fade
+// begins slightly inside the hero, not right at the boundary). Stop 2: fully
+// transparent by 20px before the very bottom of the bleed box - a fixed
+// small buffer, NOT bleed-relative (using `bleed - 20px` here previously
+// meant the fade finished just 20px into the bleed for any bleed value,
+// instead of near the end of it - the whole point of a "gradual" dissolve
+// across most of the bleed was accidentally an abrupt one right at the seam).
+const fadeGradient = (bleed: number) =>
+  `linear-gradient(to bottom, #000, #000 calc(100% - ${bleed + 70}px), transparent calc(100% - 20px))`;
+const bleedSx = {
+  bottom: { xs: -BLEED.xs, md: -BLEED.md },
+  maskImage: { xs: fadeGradient(BLEED.xs), md: fadeGradient(BLEED.md) },
+  WebkitMaskImage: { xs: fadeGradient(BLEED.xs), md: fadeGradient(BLEED.md) },
+} as const;
+
 const HeroSection: React.FC = () => {
   const reducedMotion = useReducedMotion();
   const typedRole = useTypewriter(!reducedMotion);
@@ -103,7 +126,14 @@ const HeroSection: React.FC = () => {
         minHeight: { xs: 'auto', md: '100vh' },
         py: { xs: 8, md: 12 },
         position: 'relative',
-        overflow: 'hidden',
+        // No overflow:hidden here on purpose - the two background layers below
+        // are absolutely positioned (taken out of layout, so this doesn't
+        // affect scroll-snap height math) and deliberately extend past the
+        // section's own bottom edge, masked to fade out, for a bleed effect
+        // instead of a hard cut at the section boundary. overflow-x:hidden
+        // alone would make the browser force overflow-y to 'auto' (a real
+        // clipped-scroll-region quirk when the axes differ) - not what we
+        // want - and nothing here extends horizontally, so plain 'visible' is safe.
         scrollSnapAlign: { xs: 'none', md: 'start' },
         scrollSnapStop: { xs: 'none', md: 'always' },
         display: 'flex',
@@ -112,11 +142,18 @@ const HeroSection: React.FC = () => {
       }}
     >
       {/* Background starfield — the original 2D connecting-dots network, sitting
-          behind the solar system like a distant sky */}
-      {!reducedMotion && <ParticleNetwork />}
+          behind the solar system like a distant sky. zIndex:1 (a real stacking
+          layer, not the 'auto' AboutSection sits at) is what lets this bleed
+          show up ON TOP of the next section's top edge instead of being
+          painted over by it despite coming later in the DOM. */}
+      {!reducedMotion && (
+        <Box aria-hidden="true" sx={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1, ...bleedSx }}>
+          <ParticleNetwork />
+        </Box>
+      )}
 
       {/* Perspective solar system across the whole hero, behind the content; the portrait is its sun */}
-      <Box aria-hidden="true" sx={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+      <Box aria-hidden="true" sx={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1, ...bleedSx }}>
         {sphereReady && (
           <Suspense fallback={null}>
             <OrbitalSystem

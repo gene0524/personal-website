@@ -21,12 +21,12 @@ export interface OrbitalSystemTuning {
 // its "Copy values" button - this is the values Gene chose, not a Claude guess.
 // Applies at >=900px (HeroTuningPanel's "Desktop" profile).
 export const ORBITAL_SYSTEM_DEFAULTS: OrbitalSystemTuning = {
-  elevationDeg: 13,
+  elevationDeg: 18,
   rollDeg: -25,
   focusDistance: 7.1,
   fov: 50,
-  offsetXRatio: -0.21,
-  offsetYRatio: -0.12,
+  offsetXRatio: -0.19,
+  offsetYRatio: -0.15,
   speedCoeff: 2.6,
   speedExp: 1.8,
   orbitScale: 1,
