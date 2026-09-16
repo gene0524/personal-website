@@ -1,11 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Container, Typography, Grid, Button } from '@mui/material';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
+import { Box, Container, Typography, Grid, Button, useMediaQuery } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { motion, useReducedMotion } from 'framer-motion';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import DownloadIcon from '@mui/icons-material/Download';
 import { personalInfo } from '../../data/personalInfo';
-import ParticleNetwork from '../ParticleNetwork';
 import { FONT_MONO } from '../../themes';
+import ParticleNetwork from '../ParticleNetwork';
+import { ORBITAL_SYSTEM_DEFAULTS, ORBITAL_SYSTEM_MOBILE_OVERRIDES, type OrbitalSystemTuning } from '../orbitalSystemTuning';
+
+// three.js chunk loads after first paint so the hero text and portrait (LCP) never wait for it
+const OrbitalSystem = lazy(() => import('../OrbitalSystem'));
+// Dev-only tuning panel; never bundled into production (import.meta.env.DEV
+// is statically replaced by Vite, so this whole lazy() call is dead-code-
+// eliminated from the prod build along with the panel itself).
+const HeroTuningPanel = import.meta.env.DEV ? lazy(() => import('../HeroTuningPanel')) : null;
+
+const useAfterFirstPaint = () => {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
+    const id = idle ? idle(() => setReady(true)) : window.setTimeout(() => setReady(true), 200);
+    return () => { if (!idle) window.clearTimeout(id); };
+  }, []);
+  return ready;
+};
 
 const ROLES = [
   'Software Engineer',
@@ -54,6 +72,27 @@ const scrollTo = (id: string) =>
 const HeroSection: React.FC = () => {
   const reducedMotion = useReducedMotion();
   const typedRole = useTypewriter(!reducedMotion);
+  const theme = useTheme();
+  const sphereReady = useAfterFirstPaint();
+  const portraitRef = useRef<HTMLDivElement>(null);
+  // Once the scene draws the portrait itself, the DOM copy fades out (it stays for LCP/alt text)
+  const [sceneReady, setSceneReady] = useState(false);
+  const handleSceneReady = useCallback(() => setSceneReady(true), []);
+  // The composition was solved against the desktop portrait's screen size/
+  // position - it isn't guaranteed to read the same way at mobile's much
+  // smaller portrait, so mobile gets its own tuning profile. Whichever
+  // breakpoint you're actually viewing is the one the dev panel edits: drag a
+  // slider at >=900px and it's saved as ORBITAL_SYSTEM_DEFAULTS; narrow the
+  // browser below 900px (or use DevTools device mode) and the same panel now
+  // edits ORBITAL_SYSTEM_MOBILE_OVERRIDES instead.
+  const isMobileViewport = useMediaQuery('(max-width:899px)', { noSsr: true });
+  const savedDesktopTuning = ORBITAL_SYSTEM_DEFAULTS;
+  const savedMobileTuning: OrbitalSystemTuning = { ...ORBITAL_SYSTEM_DEFAULTS, ...ORBITAL_SYSTEM_MOBILE_OVERRIDES };
+  const [desktopTuning, setDesktopTuning] = useState<OrbitalSystemTuning>(savedDesktopTuning);
+  const [mobileTuning, setMobileTuning] = useState<OrbitalSystemTuning>(savedMobileTuning);
+  const tuning = isMobileViewport ? mobileTuning : desktopTuning;
+  const setTuning = isMobileViewport ? setMobileTuning : setDesktopTuning;
+  const savedTuning = isMobileViewport ? savedMobileTuning : savedDesktopTuning;
 
   return (
     <Box
@@ -72,7 +111,37 @@ const HeroSection: React.FC = () => {
         justifyContent: 'center',
       }}
     >
+      {/* Background starfield — the original 2D connecting-dots network, sitting
+          behind the solar system like a distant sky */}
       {!reducedMotion && <ParticleNetwork />}
+
+      {/* Perspective solar system across the whole hero, behind the content; the portrait is its sun */}
+      <Box aria-hidden="true" sx={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+        {sphereReady && (
+          <Suspense fallback={null}>
+            <OrbitalSystem
+              accent={theme.palette.primary.main}
+              background={theme.palette.background.default}
+              reducedMotion={!!reducedMotion}
+              anchorRef={portraitRef}
+              portraitSrc={personalInfo.avatarUrl}
+              onReady={handleSceneReady}
+              {...tuning}
+            />
+          </Suspense>
+        )}
+      </Box>
+
+      {HeroTuningPanel && (
+        <Suspense fallback={null}>
+          <HeroTuningPanel
+            value={tuning}
+            onChange={setTuning}
+            resetValue={savedTuning}
+            profile={isMobileViewport ? 'mobile' : 'desktop'}
+          />
+        </Suspense>
+      )}
 
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
         <Grid container spacing={4} alignItems="center">
@@ -194,23 +263,6 @@ const HeroSection: React.FC = () => {
                 >
                   See projects
                 </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<DownloadIcon />}
-                  href={personalInfo.resumeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{
-                    borderColor: 'rgba(0,255,157,0.4)',
-                    color: 'primary.main',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    borderRadius: '999px',
-                    '&:hover': { borderColor: 'primary.main', backgroundColor: 'rgba(0,255,157,0.08)' },
-                  }}
-                >
-                  Resume
-                </Button>
               </Box>
             </motion.div>
           </Grid>
@@ -228,43 +280,36 @@ const HeroSection: React.FC = () => {
               transition={{ duration: 0.8, delay: 0.3 }}
             >
               <Box
+                ref={portraitRef}
                 sx={{
                   position: 'relative',
                   width: { xs: '200px', md: '300px' },
                   height: { xs: '200px', md: '300px' },
+                  mt: { xs: 7, md: 0 },
+                  mb: { xs: 4, md: 0 },
                 }}
               >
-                {/* Pulse glow */}
-                <Box aria-hidden="true" sx={{
-                  position: 'absolute',
-                  inset: -16,
-                  borderRadius: '50%',
-                  background: 'radial-gradient(circle, rgba(0,255,157,0.18) 0%, transparent 70%)',
-                  filter: 'blur(16px)',
-                  animation: reducedMotion ? 'none' : 'glow 3s ease-in-out infinite',
-                  '@keyframes glow': {
-                    '0%, 100%': { opacity: 0.6, transform: 'scale(1)' },
-                    '50%': { opacity: 1, transform: 'scale(1.06)' },
-                  },
-                }} />
-                {/* Rotating dashed ring */}
-                <Box aria-hidden="true" sx={{
-                  position: 'absolute',
-                  inset: -10,
-                  borderRadius: '50%',
-                  border: '1.5px dashed rgba(0,255,157,0.3)',
-                  animation: reducedMotion ? 'none' : 'spin 22s linear infinite',
-                  '@keyframes spin': {
-                    '0%': { transform: 'rotate(0deg)' },
-                    '100%': { transform: 'rotate(360deg)' },
-                  },
-                }} />
-                {/* Solid border */}
+                {/* Solid border — a simple "photo has an edge" cue before the scene loads */}
                 <Box aria-hidden="true" sx={{
                   position: 'absolute',
                   inset: -2,
                   borderRadius: '50%',
                   border: '2px solid rgba(0,255,157,0.25)',
+                  opacity: sceneReady ? 0 : 1,
+                  transition: 'opacity 0.8s ease',
+                }} />
+                {/* Rotating dashed ring — permanent tech-HUD accent, sits above the canvas */}
+                <Box aria-hidden="true" sx={{
+                  position: 'absolute',
+                  inset: -8,
+                  borderRadius: '50%',
+                  border: '1.5px dashed rgba(0,255,157,0.35)',
+                  zIndex: 2,
+                  animation: reducedMotion ? 'none' : 'spin 22s linear infinite',
+                  '@keyframes spin': {
+                    '0%': { transform: 'rotate(0deg)' },
+                    '100%': { transform: 'rotate(360deg)' },
+                  },
                 }} />
                 {/* Photo (LCP element) */}
                 <Box
@@ -283,6 +328,8 @@ const HeroSection: React.FC = () => {
                     position: 'relative',
                     zIndex: 1,
                     display: 'block',
+                    opacity: sceneReady ? 0 : 1,
+                    transition: 'opacity 0.8s ease',
                   }}
                 />
               </Box>

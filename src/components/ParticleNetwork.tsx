@@ -8,7 +8,15 @@ interface Particle {
   radius: number;
 }
 
-const PARTICLE_COUNT = 80;
+// PARTICLE_COUNT is now a target DENSITY (per 1440x900), not a fixed count -
+// at a fixed count, the mobile hero (minHeight:auto, roughly a quarter of the
+// desktop canvas area) packed the same 80 particles into a quarter of the
+// space, so CONNECT_DIST=100 linked nearly everything into one dense tangle
+// instead of a sparse network. Scaling count to area keeps the same relative
+// sparseness at every viewport.
+const PARTICLE_DENSITY_REF = { count: 80, width: 1440, height: 900 };
+const MIN_PARTICLES = 20;
+const MAX_PARTICLES = 100;
 const CONNECT_DIST = 100;
 const MOUSE_RADIUS = 160;
 const MOUSE_INFLUENCE = 0.12; // fraction of cursor velocity transferred to particles
@@ -29,17 +37,6 @@ const ParticleNetwork = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const resize = () => {
-      const dpr = window.devicePixelRatio || 1;
-      const w = canvas.offsetWidth;
-      const h = canvas.offsetHeight;
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-    resize();
-    window.addEventListener('resize', resize);
-
     // Pre-rendered glow sprite — same radial falloff as the previous
     // per-frame createRadialGradient, but drawn once and blitted per particle.
     const GLOW_SPRITE_R = 64;
@@ -58,13 +55,54 @@ const ParticleNetwork = () => {
     const cw = () => canvas.offsetWidth;
     const ch = () => canvas.offsetHeight;
 
-    const particles: Particle[] = Array.from({ length: PARTICLE_COUNT }, () => ({
-      x: Math.random() * cw(),
-      y: Math.random() * ch(),
-      vx: (Math.random() - 0.5) * 0.6,
-      vy: (Math.random() - 0.5) * 0.6,
-      radius: Math.random() * 1.6 + 0.8,
-    }));
+    // The hero's minHeight is 'auto' below md, so on mobile the section's real
+    // height depends on text/photo layout that may not be settled on the very
+    // first measurement. A ResizeObserver (not a one-shot + window 'resize')
+    // catches that settling, and rescales existing particles proportionally
+    // instead of leaving them clumped at whatever tiny/wrong box they first
+    // spawned into - that's what "switch to mobile and the stars clump" was.
+    const targetCount = (w: number, h: number) => {
+      const scaled = Math.round(
+        (PARTICLE_DENSITY_REF.count * (w * h)) / (PARTICLE_DENSITY_REF.width * PARTICLE_DENSITY_REF.height),
+      );
+      return Math.min(MAX_PARTICLES, Math.max(MIN_PARTICLES, scaled));
+    };
+
+    let particles: Particle[] = [];
+    let lastW = 0;
+    let lastH = 0;
+    const seedOrRescale = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const w = cw();
+      const h = ch();
+      if (w < 1 || h < 1) return; // not laid out yet
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const count = targetCount(w, h);
+      if (particles.length !== count) {
+        // Different density tier (e.g. first mobile measurement, or a
+        // desktop<->mobile viewport switch during dev) - reseed rather than
+        // rescale, since rescaling can't add/remove particles.
+        particles = Array.from({ length: count }, () => ({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          vx: (Math.random() - 0.5) * 0.6,
+          vy: (Math.random() - 0.5) * 0.6,
+          radius: Math.random() * 1.6 + 0.8,
+        }));
+      } else if (lastW > 20 && lastH > 20 && (Math.abs(w - lastW) > 1 || Math.abs(h - lastH) > 1)) {
+        const sx = w / lastW;
+        const sy = h / lastH;
+        for (const p of particles) { p.x *= sx; p.y *= sy; }
+      }
+      lastW = w;
+      lastH = h;
+    };
+    seedOrRescale();
+    const resizeObserver = new ResizeObserver(seedOrRescale);
+    resizeObserver.observe(canvas);
 
     const draw = () => {
       ctx.clearRect(0, 0, cw(), ch());
@@ -197,8 +235,8 @@ const ParticleNetwork = () => {
 
     return () => {
       io.disconnect();
+      resizeObserver.disconnect();
       cancelAnimationFrame(rafRef.current);
-      window.removeEventListener('resize', resize);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseleave', onLeave);
     };
