@@ -310,6 +310,21 @@
         "followUp": "Gene flagged a real UX gap in WF11's layout: tapping a row near the top of the list leaves its description far below, off the bottom of a short viewport - the panel always sits after the WHOLE list regardless of which row is active. Considered an in-place popover anchored directly under the tapped row (visually tighter) but caught a real flaw before implementing: a long enough description would cover the rows below it, either blocking taps on them or (if those rows are z-indexed above it to stay tappable) rendering the popover as awkward slivers behind them. Kept the simple list+single-panel structure (no overlap/z-index complexity) and added scrollIntoView({block:'nearest'}) on the panel, fired from the row-select handler - only scrolls the minimum needed to reveal it (no-op if already visible), a native smooth scroll rather than a layout operation. Verified via Puppeteer on a 700px-tall viewport: panel goes from fully off-screen (top 559px/bottom 919px) to fully visible (top 339px/bottom 699.7px) after tapping the first row. Commit 2ea01a1.",
         "dialogFollowUp": "Gene asked whether a popup/Dialog would be even better than the auto-scroll fix. Agreed - switched the mobile detail target from the inline scrollIntoView panel to a centred Dialog reusing the exact pattern already proven in the Work sections project detail (dimmed backdrop, close button, PaperProps styling). Sidesteps scroll-position dependency entirely rather than mitigating it - the dialog appears in the same place regardless of which row was tapped, and open/close is a compositor-only fade, cheaper than the scroll animation it replaces. Verified via Puppeteer: tapping the last row (previously worst case for scroll distance) opens the dialog with correct content; close button works. Commit 127bdb5."
       }
+    },
+    {
+      "priority": "discovered mid-session, not in original P1-P5",
+      "id": "WF12",
+      "name": "Round 12: Travel globe still stutters - WF8 only prefetched the code, not the data",
+      "why": "Gene, after confirming the Experience Dialog redesign felt good: Travel's globe still stutters when it loads, asked for the general best practice.",
+      "how": "Read TravelSection.tsx fully for the first time this investigation. Found the gap: a useEffect fetches a ~108KB world-atlas JSON (/globe/countries-110m.json) and react-globe.gl separately loads a ~70KB texture (/globe/earth-night.webp), but BOTH only start once the component actually mounts - a second serial network round-trip stacked after the first (chunk download -> parse -> mount -> THEN fetch data -> THEN render). WF8's idle-prefetch only warmed the JS module cache, not these two data dependencies, so the code arrived early but still had to wait on a cold data fetch once mounted.",
+      "effort": "~0.25 day",
+      "status": "done-pending-device-confirmation",
+      "result": {
+        "bestPractice": "Front-load EVERY async dependency of a deferred component together during the same idle window - code, data, AND images - not just the JS bundle. Code-splitting alone only solves half the waterfall if the component does its own fetch()/image-load once mounted.",
+        "implementation": "Extended the existing requestIdleCallback prefetch in DeferredTravelSection (App.tsx) to also fire fetch('/globe/countries-110m.json') and new Image().src = '/globe/earth-night.webp' in parallel with the dynamic import(). Both land in the browser's HTTP/image cache, so TravelSection's own fetch/texture load resolve instantly (cache hit) once shouldLoad flips true, instead of hitting the network cold.",
+        "verification": "Puppeteer against a production preview build confirms all three requests (JS chunk, JSON, webp) fire in parallel ~305ms after page load with zero scrolling toward Travel. Screenshot confirms the globe still renders correctly.",
+        "verdict": "Pending Gene's device re-test. This closes the gap WF8 left - the whole component tree (code + data + textures) should now be warm well before Travel is ever scrolled into view on a normal visit."
+      }
     }
   ],
   "openQuestions": [
