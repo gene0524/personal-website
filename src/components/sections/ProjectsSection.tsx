@@ -253,7 +253,14 @@ const StageCard: React.FC<StageCardProps> = ({ project, index, total, trackRef, 
             )}
             <Box aria-hidden="true" sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(7,9,15,0.55), transparent 45%)', pointerEvents: 'none' }} />
             <Box sx={{ position: 'absolute', top: 14, left: 14, right: 14, display: 'flex', justifyContent: 'space-between', gap: 1, zIndex: 2 }}>
-              <Box sx={PILL_SX}>{project.org}</Box>
+              {/* Some org strings ("Imperial College London · PAKDD 2026", "Client ·
+                  national non-profit association, Taiwan") are fine at the 380-500px
+                  desktop card width but overflow the 240px mobile minimum - flex items
+                  don't shrink below their content's intrinsic width by default, so this
+                  needs minWidth:0 + ellipsis rather than relying on the parent's flex. */}
+              <Box sx={{ ...PILL_SX, minWidth: 0, maxWidth: { xs: '58%', md: '68%' }, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {project.org}
+              </Box>
               <Box sx={PILL_SX}>
                 {project.year}
                 {STATUS_NOTE[project.status] && (
