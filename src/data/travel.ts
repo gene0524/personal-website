@@ -40,6 +40,7 @@ export const visitedCountries: CountryVisit[] = [
   { id: 208, name: 'Denmark',       badge: '🇩🇰', photos: [], note: 'Copenhagen, 2024 — hygge is absolutely real.' },
   { id: 752, name: 'Sweden',        badge: '🇸🇪', photos: [], note: 'Stockholm and north, 2024.' },
   { id: 578, name: 'Norway',        badge: '🇳🇴', photos: ['/assets/images/travel/norway-1.webp', '/assets/images/travel/norway-2.webp'], note: 'Lofoten Islands self-drive — most dramatic landscape I\'ve ever seen (2022).' },
+  { id: 56,  name: 'Belgium',       badge: '🇧🇪', photos: [], note: 'Brussels, Bruges and Ghent, August 2026.' },
   { id: 250, name: 'France',        badge: '🇫🇷', photos: ['/assets/images/travel/france-1.webp', '/assets/images/travel/france-2.webp'], note: 'Self-drive through Paris and the south, 2019.' },
   { id: 492, name: 'Monaco',        badge: '🇲🇨', photos: [],       note: 'Tiny but impossibly glitzy — a quick stop on the 2019 drive.' },
   { id: 20,  name: 'Andorra',       badge: '🇦🇩', photos: [],       note: 'High-altitude detour on the Pyrenees self-drive, 2019.' },

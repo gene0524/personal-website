@@ -19,6 +19,14 @@ interface GeoFeature {
 const VISITED_COLOR = 'rgba(0,255,157,0.52)';
 const DEFAULT_COLOR = 'rgba(255,255,255,0.04)';
 const HOVER_COLOR   = 'rgba(0,255,157,0.92)';
+const HOVER_UNVISITED_COLOR = 'rgba(255,255,255,0.16)';
+
+const labelHtml = (text: string, visited: boolean) =>
+  `<div style="background:rgba(0,0,0,0.72);padding:5px 10px;border-radius:6px;font-family:monospace;font-size:13px;${
+    visited
+      ? 'color:#00ff9d;border:1px solid rgba(0,255,157,0.3)'
+      : 'color:rgba(230,241,255,0.55);border:1px solid rgba(255,255,255,0.12)'
+  }">${text}</div>`;
 
 const toNumId = (f: GeoFeature) =>
   typeof f.id === 'string' ? parseInt(f.id, 10) : (f.id as number ?? -1);
@@ -251,8 +259,9 @@ const TravelSection: React.FC = () => {
   const getCountryColor = useCallback(
     (feat: object) => {
       const f = feat as GeoFeature;
-      if (hoveredCountry && f.id === hoveredCountry.id) return HOVER_COLOR;
-      return visitedIds.has(toNumId(f)) ? VISITED_COLOR : DEFAULT_COLOR;
+      const visited = visitedIds.has(toNumId(f));
+      if (hoveredCountry && f.id === hoveredCountry.id) return visited ? HOVER_COLOR : HOVER_UNVISITED_COLOR;
+      return visited ? VISITED_COLOR : DEFAULT_COLOR;
     },
     [hoveredCountry],
   );
@@ -406,8 +415,9 @@ const TravelSection: React.FC = () => {
                 polygonLabel={(feat: object) => {
                   const f = feat as GeoFeature;
                   const visit = visitedCountries.find(c => c.id === toNumId(f));
-                  if (!visit) return '';
-                  return `<div style="background:rgba(0,0,0,0.72);color:#00ff9d;padding:5px 10px;border-radius:6px;font-family:monospace;font-size:13px;border:1px solid rgba(0,255,157,0.3)">${visit.badge} ${visit.name}</div>`;
+                  if (visit) return labelHtml(`${visit.badge} ${visit.name}`, true);
+                  const name = f.properties?.name;
+                  return name ? labelHtml(name, false) : '';
                 }}
                 onPolygonHover={handleHover}
                 onPolygonClick={(feat: object) => {
