@@ -50,7 +50,11 @@ const MONO_SX = { fontFamily: FONT_MONO, fontSize: '0.72rem', letterSpacing: '0.
 
 type View = 'cards' | 'list';
 
-const FILMSTRIP_CARD_W = 'clamp(380px, 40vw, 500px)';
+// Card width per breakpoint — narrower/vw-driven on mobile so a neighbour
+// peeks in on each side (a snap-scroll cue), fixed-ish on desktop.
+const CARD_W = { xs: 'clamp(240px, 78vw, 380px)', sm: 'clamp(380px, 55vw, 460px)', md: 'clamp(380px, 40vw, 500px)' } as const;
+const CARD_FLEX_SX = { xs: `0 0 ${CARD_W.xs}`, sm: `0 0 ${CARD_W.sm}`, md: `0 0 ${CARD_W.md}` };
+const TRACK_PX_SX = { xs: `calc(50% - (${CARD_W.xs}) / 2)`, sm: `calc(50% - (${CARD_W.sm}) / 2)`, md: `calc(50% - (${CARD_W.md}) / 2)` };
 const FILMSTRIP_ITEM = '[data-filmstrip-item]';
 const GLASS_STROKE = '1px solid rgba(255,255,255,0.14)';
 const PILL_SX = {
@@ -68,21 +72,6 @@ const PILL_SX = {
   color: 'text.primary',
   whiteSpace: 'nowrap',
 } as const;
-
-// ── Meta line: "ORG · YEAR" in mono, optional status note ──────────────────
-const Meta: React.FC<{ project: Project }> = ({ project }) => (
-  <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, ...MONO_SX }}>
-    <span>{project.org}</span>
-    <span style={{ whiteSpace: 'nowrap' }}>
-      {project.year}
-      {STATUS_NOTE[project.status] && (
-        <Box component="span" sx={{ ml: 1.5, color: 'rgba(255,184,107,0.9)' }}>
-          {STATUS_NOTE[project.status]}
-        </Box>
-      )}
-    </span>
-  </Box>
-);
 
 // ── Cover for entries without a picture ────────────────────────────────────
 const GeneratedCover: React.FC<{ project: Project }> = ({ project }) => (
@@ -106,153 +95,7 @@ const GeneratedCover: React.FC<{ project: Project }> = ({ project }) => (
   </Box>
 );
 
-// ── Grid tile ──────────────────────────────────────────────────────────────
-interface TileProps {
-  project: Project;
-  onOpen: (p: Project) => void;
-  reducedMotion: boolean;
-  index: number;
-}
-
-const Tile: React.FC<TileProps> = ({ project, onOpen, reducedMotion, index }) => {
-  const img = projectImageUrl(project);
-  const live = project.links.live;
-
-  return (
-    <Box
-      component={motion.article}
-      initial={reducedMotion ? false : { opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: 0.45, delay: Math.min(index % 2, 1) * 0.08 }}
-      sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, minWidth: 0 }}
-    >
-      <Meta project={project} />
-
-      {/* Media: the whole tile opens the detail view; the live link is separate */}
-      <Box
-        role="button"
-        tabIndex={0}
-        aria-label={`${project.title}: open details`}
-        onClick={() => onOpen(project)}
-        onKeyDown={(e: React.KeyboardEvent) => {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(project); }
-        }}
-        sx={{
-          position: 'relative',
-          aspectRatio: '16 / 10',
-          borderRadius: 2.5,
-          overflow: 'hidden',
-          cursor: 'pointer',
-          backgroundColor: '#0d1b33',
-          outline: 'none',
-          '&:focus-visible': { boxShadow: '0 0 0 2px #00ff9d' },
-          '& img': { transition: reducedMotion ? 'none' : 'transform 0.6s cubic-bezier(0.2,0.7,0.2,1)' },
-          '&:hover img': { transform: reducedMotion ? 'none' : 'scale(1.03)' },
-        }}
-      >
-        {img ? (
-          <Box
-            component="img"
-            src={img}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            width={project.image?.width}
-            height={project.image?.height}
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              objectPosition: project.image?.position ?? 'top',
-              display: 'block',
-            }}
-          />
-        ) : (
-          <GeneratedCover project={project} />
-        )}
-        {/* hairline inset so light screenshots don't bleed into the page */}
-        <Box aria-hidden="true" sx={{ position: 'absolute', inset: 0, borderRadius: 2.5, boxShadow: 'inset 0 0 0 1px rgba(230,241,255,0.08)', pointerEvents: 'none' }} />
-      </Box>
-
-      <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 2 }}>
-        <Typography
-          variant="h5"
-          component="h3"
-          sx={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: { xs: '1.25rem', md: '1.45rem' }, lineHeight: 1.2, m: 0 }}
-        >
-          <Box
-            component="button"
-            type="button"
-            onClick={() => onOpen(project)}
-            sx={{
-              all: 'unset',
-              cursor: 'pointer',
-              '&:hover': { color: 'primary.main' },
-              '&:focus-visible': { outline: '2px solid #00ff9d', outlineOffset: 3, borderRadius: 0.5 },
-            }}
-          >
-            {project.title}
-          </Box>
-        </Typography>
-        {live && (
-          <Box
-            component="a"
-            href={live}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Visit ${project.title} (opens in new tab)`}
-            sx={{
-              ...MONO_SX,
-              color: 'primary.main',
-              textDecoration: 'none',
-              whiteSpace: 'nowrap',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 0.5,
-              '&:hover': { textDecoration: 'underline' },
-            }}
-          >
-            visit <OpenInNewIcon sx={{ fontSize: 13 }} />
-          </Box>
-        )}
-      </Box>
-
-      <Typography variant="body2" sx={{ color: 'text.primary', fontSize: { xs: '0.95rem', md: '1rem' }, lineHeight: 1.55, m: 0 }}>
-        {project.tagline}
-      </Typography>
-      <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.88rem', lineHeight: 1.5, m: 0 }}>
-        {project.role}
-      </Typography>
-
-      <Box
-        component="ul"
-        sx={{
-          listStyle: 'none',
-          m: 0,
-          mt: 0.5,
-          p: 0,
-          pt: 1.25,
-          borderTop: HAIRLINE,
-          display: 'flex',
-          flexWrap: 'wrap',
-          columnGap: 2,
-          rowGap: 0.5,
-          ...MONO_SX,
-          color: 'primary.main',
-        }}
-      >
-        {project.facts.slice(0, 3).map(f => (
-          <li key={f}>{f}</li>
-        ))}
-      </Box>
-    </Box>
-  );
-};
-
-// ── Stage card (desktop filmstrip) ─────────────────────────────────────────
+// ── Stage card (filmstrip) ──────────────────────────────────────────────────
 // Glass card on a horizontal snap track. Everything visual is driven by the
 // card's position in the track: the centred card is lit (ambient glow from its
 // own screenshot, accent ring, full colour, pointer tilt) and neighbours turn
@@ -308,7 +151,7 @@ const StageCard: React.FC<StageCardProps> = ({ project, index, total, trackRef, 
       role="group"
       aria-roledescription="slide"
       aria-label={`${index + 1} of ${total}`}
-      sx={{ flex: `0 0 ${FILMSTRIP_CARD_W}`, minWidth: 0, scrollSnapAlign: 'center', position: 'relative' }}
+      sx={{ flex: CARD_FLEX_SX, minWidth: 0, scrollSnapAlign: 'center', position: 'relative' }}
     >
       <motion.div
         style={{ scale, rotateY, rotateX: tiltX, filter, transformPerspective: 1400, height: '100%', position: 'relative' }}
@@ -420,12 +263,12 @@ const StageCard: React.FC<StageCardProps> = ({ project, index, total, trackRef, 
             </Box>
           </Box>
 
-          <Box sx={{ p: { md: 2.5 }, pt: { md: 2 }, display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
+          <Box sx={{ p: { xs: 2, md: 2.5 }, pt: { xs: 1.75, md: 2 }, display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 2 }}>
               <Typography
                 variant="h4"
                 component="h3"
-                sx={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: { md: '1.55rem', lg: '1.7rem' }, lineHeight: 1.15, m: 0, letterSpacing: '-0.01em' }}
+                sx={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: { xs: '1.3rem', md: '1.55rem', lg: '1.7rem' }, lineHeight: 1.15, m: 0, letterSpacing: '-0.01em' }}
               >
                 {project.title}
               </Typography>
@@ -588,7 +431,7 @@ const Filmstrip: React.FC<FilmstripProps> = ({ items, onOpen, onActiveChange, re
           display: 'flex',
           alignItems: 'center',
           gap: 3,
-          px: `calc(50% - (${FILMSTRIP_CARD_W}) / 2)`,
+          px: TRACK_PX_SX,
           py: 4,
           my: -2.5,
           overflowX: 'auto',
@@ -705,10 +548,9 @@ const ProjectsSection: React.FC = () => {
   const [view, setView] = useState<View>('cards');
   const [kind, setKind] = useState<string | null>(null);
   const isTouch = useMediaQuery('(hover: none)');
-  const isDesktop = useMediaQuery('(min-width:900px)', { noSsr: true });
   const reducedMotion = !!useReducedMotion();
   const [stageProject, setStageProject] = useState<Project | null>(null);
-  const washImg = isDesktop && view === 'cards' && stageProject ? projectImageUrl(stageProject) : null;
+  const washImg = view === 'cards' && stageProject ? projectImageUrl(stageProject) : null;
 
   const visible = useMemo(
     () => (kind ? projects.filter(p => p.kind[0] === kind) : projects),
@@ -835,21 +677,13 @@ const ProjectsSection: React.FC = () => {
         <AnimatePresence mode="wait" initial={false}>
           {view === 'cards' ? (
             <motion.div
-              key={`cards-${kind ?? 'all'}-${isDesktop ? 'strip' : 'stack'}`}
+              key={`cards-${kind ?? 'all'}`}
               initial={reducedMotion ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              {isDesktop ? (
-                <Filmstrip items={visible} onOpen={setSelected} onActiveChange={setStageProject} reducedMotion={reducedMotion} />
-              ) : (
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', rowGap: 5 }}>
-                  {visible.map((p, i) => (
-                    <Tile key={p.slug} project={p} index={i} onOpen={setSelected} reducedMotion={reducedMotion} />
-                  ))}
-                </Box>
-              )}
+              <Filmstrip items={visible} onOpen={setSelected} onActiveChange={setStageProject} reducedMotion={reducedMotion} />
             </motion.div>
           ) : (
             <motion.div
