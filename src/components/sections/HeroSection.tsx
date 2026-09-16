@@ -72,9 +72,26 @@ const useTypewriter = (enabled: boolean) => {
 // other animation systems right as they're warming up on load, was the
 // stutter Gene felt specifically while the role text typed.
 const TypewriterRole: React.FC<{ reducedMotion: boolean }> = ({ reducedMotion }) => {
-  const typedRole = useTypewriter(!reducedMotion);
+  // useTypewriter's setTimeout chain had no visibility gating at all - it
+  // kept firing every 40-95ms forever, on every section of the page, not
+  // just while the hero was actually on screen. A real device trace caught
+  // the typed text still changing while scrolled away to Experience, same
+  // category of bug as the OrbitalSystem poll and the Work filmstrip's
+  // breathing ring (WF4/WF5): something that should pause off-screen but
+  // didn't. IntersectionObserver here reuses the same pattern.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([entry]) => setVisible(entry?.isIntersecting ?? true));
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  const typedRole = useTypewriter(!reducedMotion && visible);
   return (
     <Box
+      ref={rootRef}
       sx={{
         display: 'flex',
         alignItems: 'center',
@@ -106,6 +123,7 @@ const TypewriterRole: React.FC<{ reducedMotion: boolean }> = ({ reducedMotion })
             ml: 0.5,
             flexShrink: 0,
             animation: 'blink 1s step-end infinite',
+            animationPlayState: visible ? 'running' : 'paused',
             '@keyframes blink': {
               '0%, 100%': { opacity: 1 },
               '50%': { opacity: 0 },
