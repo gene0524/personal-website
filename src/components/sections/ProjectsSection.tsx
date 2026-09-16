@@ -199,6 +199,7 @@ const StageCard: React.FC<StageCardProps> = ({ project, index, total, trackRef, 
               borderRadius: '20px',
               boxShadow: `0 0 0 1px ${alpha(accent, 0.55)}, 0 0 60px ${alpha(accent, 0.22)}, 0 0 120px ${alpha(accent, 0.12)}`,
               animation: reducedMotion ? 'none' : `${breathe} 3.2s ease-in-out infinite`,
+              '[data-in-view="false"] &': { animationPlayState: 'paused' },
             }}
           />
         </motion.div>
@@ -422,6 +423,28 @@ const Filmstrip: React.FC<FilmstripProps> = ({ items, onOpen, onActiveChange, re
   useEffect(() => {
     onActiveChange(items[activeIndex] ?? null);
   }, [activeIndex, items, onActiveChange]);
+
+  // A real on-device trace (Safari Web Inspector) showed continuous Style
+  // Invalidation/Recalculate Style - but NOT continuous Layout - while the
+  // user was scrolled away entirely, sitting on the Experience section.
+  // That pattern (style/paint work with no layout) pointed at an animation
+  // that doesn't affect geometry: each card's accent-ring "breathing" glow
+  // is a CSS @keyframes animation, and CSS animations keep running even on
+  // an element that's off-screen or whose ancestor has opacity:0 - all 11
+  // cards' animations were ticking in the background the whole time,
+  // regardless of which section was actually in view. Toggling this is rare
+  // (once per scroll into/out of the whole section, not per frame like the
+  // backdrop-filter toggle that backfired earlier), so it's safe here.
+  useEffect(() => {
+    const t = trackRef.current;
+    if (!t) return;
+    t.dataset.inView = 'true';
+    const io = new IntersectionObserver(([entry]) => {
+      t.dataset.inView = String(entry?.isIntersecting ?? true);
+    });
+    io.observe(t);
+    return () => io.disconnect();
+  }, []);
 
   const centerOn = useCallback(
     (el: HTMLElement) => {
