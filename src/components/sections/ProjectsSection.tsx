@@ -353,19 +353,33 @@ const Filmstrip: React.FC<FilmstripProps> = ({ items, onOpen, onActiveChange, re
   const [activeIndex, setActiveIndex] = useState(0);
   const { scrollXProgress: trackProgress } = useScroll({ container: trackRef, axis: 'x', layoutEffect: false });
 
+  // Real on-device profiling (Safari Web Inspector, iPhone) showed continuous
+  // "Recalculate Style"/"Layout" during the slide, well past where the touch
+  // gesture itself ended - traced to this: nearestIndex used to read
+  // offsetLeft/offsetWidth off all N card elements every scroll frame, in a
+  // separate rAF from the one Framer Motion uses internally to write each
+  // card's transform/filter. Reading layout-dependent geometry right after
+  // (or right before) another callback writes style to those same elements
+  // is the textbook forced-synchronous-layout pattern. Cards are uniform
+  // width with scroll-snap-align: center, so the index is recoverable from
+  // scrollLeft alone (cheap, not layout-dependent) once the fixed spacing
+  // between card centres is known - measured only on mount/resize, not
+  // every frame.
+  const stepRef = useRef(0);
+  const measureStep = useCallback(() => {
+    const t = trackRef.current;
+    if (!t) return;
+    const els = t.querySelectorAll<HTMLElement>(FILMSTRIP_ITEM);
+    if (els.length >= 2) stepRef.current = els[1].offsetLeft - els[0].offsetLeft;
+    else if (els.length === 1) stepRef.current = els[0].offsetWidth;
+  }, []);
+
   const nearestIndex = useCallback(() => {
     const t = trackRef.current;
-    if (!t) return 0;
-    const els = Array.from(t.querySelectorAll<HTMLElement>(FILMSTRIP_ITEM));
-    const mid = t.scrollLeft + t.clientWidth / 2;
-    let current = 0;
-    let best = Infinity;
-    els.forEach((el, i) => {
-      const d = Math.abs(el.offsetLeft + el.offsetWidth / 2 - mid);
-      if (d < best) { best = d; current = i; }
-    });
-    return current;
-  }, []);
+    if (!t || !stepRef.current) return 0;
+    const raw = Math.round(t.scrollLeft / stepRef.current);
+    return Math.min(items.length - 1, Math.max(0, raw));
+  }, [items.length]);
 
   const updateScroll = useCallback(() => {
     const t = trackRef.current;
@@ -379,12 +393,10 @@ const Filmstrip: React.FC<FilmstripProps> = ({ items, onOpen, onActiveChange, re
   useEffect(() => {
     const t = trackRef.current;
     if (!t) return;
+    measureStep();
     updateScroll();
-    // Native smooth-scroll (the arrow buttons) fires many 'scroll' events per
-    // animation frame; updateScroll re-queries all cards' offsetLeft, so
-    // running it unthrottled meant several DOM reads/reflow per frame during
-    // the slide. Coalescing to at most one per rAF cuts that back to the
-    // frame rate without changing the result.
+    // Coalesce to at most one updateScroll per rAF - now a single cheap
+    // scrollLeft read plus arithmetic, not a DOM query.
     let raf = 0;
     const onScroll = () => {
       if (raf) return;
@@ -394,14 +406,17 @@ const Filmstrip: React.FC<FilmstripProps> = ({ items, onOpen, onActiveChange, re
       });
     };
     t.addEventListener('scroll', onScroll, { passive: true });
-    const ro = new ResizeObserver(updateScroll);
+    const ro = new ResizeObserver(() => {
+      measureStep();
+      updateScroll();
+    });
     ro.observe(t);
     return () => {
       t.removeEventListener('scroll', onScroll);
       if (raf) cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, [updateScroll]);
+  }, [updateScroll, measureStep]);
 
   useEffect(() => {
     onActiveChange(items[activeIndex] ?? null);
