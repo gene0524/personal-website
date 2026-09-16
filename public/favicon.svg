@@ -1,12 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#0d1117"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#0d1117"/>
   <text
-    x="16"
-    y="22"
-    font-family="'Courier New', monospace"
-    font-size="22"
-    font-weight="700"
+    x="32"
+    y="43"
+    font-family="Poppins, 'Helvetica Neue', Helvetica, Arial, sans-serif"
+    font-size="31"
+    font-weight="800"
+    letter-spacing="-1.5"
     text-anchor="middle"
     fill="#00ff9d"
-  >G</text>
+  >GY</text>
 </svg>
