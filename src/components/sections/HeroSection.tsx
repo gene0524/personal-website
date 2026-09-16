@@ -169,6 +169,18 @@ const HeroSection: React.FC = () => {
   // Once the scene draws the portrait itself, the DOM copy fades out (it stays for LCP/alt text)
   const [sceneReady, setSceneReady] = useState(false);
   const handleSceneReady = useCallback(() => setSceneReady(true), []);
+  // A full sweep for every always-on animation in the codebase (after the
+  // typewriter turned out to be the 3rd instance of "off-screen doesn't
+  // pause") found one more: this rotating dashed ring around the portrait
+  // had no visibility gating either. Reuses portraitRef, no extra DOM node.
+  const [heroVisible, setHeroVisible] = useState(true);
+  useEffect(() => {
+    const el = portraitRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([entry]) => setHeroVisible(entry?.isIntersecting ?? true));
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
   // The composition was solved against the desktop portrait's screen size/
   // position - it isn't guaranteed to read the same way at mobile's much
   // smaller portrait, so mobile gets its own tuning profile. Whichever
@@ -369,6 +381,7 @@ const HeroSection: React.FC = () => {
                   border: '1.5px dashed rgba(0,255,157,0.35)',
                   zIndex: 2,
                   animation: reducedMotion ? 'none' : 'spin 22s linear infinite',
+                  animationPlayState: heroVisible ? 'running' : 'paused',
                   '@keyframes spin': {
                     '0%': { transform: 'rotate(0deg)' },
                     '100%': { transform: 'rotate(360deg)' },
