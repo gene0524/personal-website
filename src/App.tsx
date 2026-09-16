@@ -4,54 +4,42 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Layout from './components/Layout';
 import HeroSection from './components/sections/HeroSection';
 import AboutSection from './components/sections/AboutSection';
-import ExperienceSection from './components/sections/ExperienceSection';
-import ProjectsSection from './components/sections/ProjectsSection';
-import ContactSection from './components/sections/ContactSection';
 import SocialLinks from './components/SocialLinks';
 import ScrollIndicator from './components/ScrollIndicator';
 import { Box, CircularProgress } from '@mui/material';
 import { modernTechTheme, typography, components } from './themes';
 
+// Below-the-fold sections were all bundled eagerly into the main chunk
+// (~650KB/207KB gzip) regardless of whether a visit ever scrolls that far.
+// About stays eager - it's usually the very next thing scrolled to, so
+// deferring it wouldn't save meaningful time and risks a visible loading
+// flash for the MOST likely next section. Everything after it uses the same
+// pattern proven out on TravelSection: idle-prefetch the code (decoupled
+// from scroll position, using the seconds of idle time before a normal
+// visit scrolls this far) + defer actual mounting until an IntersectionObserver
+// says it's getting close.
+const ExperienceSection = lazy(() => import('./components/sections/ExperienceSection'));
+const ProjectsSection = lazy(() => import('./components/sections/ProjectsSection'));
 const TravelSection = lazy(() => import('./components/sections/TravelSection'));
+const ContactSection = lazy(() => import('./components/sections/ContactSection'));
 
-// Defer mounting TravelSection (and its ~1.8MB three.js chunk) until the user
-// scrolls near it, so it doesn't compete with above-the-fold resources.
-// The placeholder keeps the #travel anchor and section height so nav links
-// and scroll-snap behave the same before the real section swaps in.
-const DeferredTravelSection: React.FC = () => {
+interface DeferredSectionProps {
+  id: string;
+  minHeight: string | { xs?: string; md?: string };
+  rootMargin: string;
+  Component: React.LazyExoticComponent<React.ComponentType>;
+  onPrefetch: () => void;
+}
+
+const DeferredSection: React.FC<DeferredSectionProps> = ({ id, minHeight, rootMargin, Component, onPrefetch }) => {
   const placeholderRef = useRef<HTMLDivElement>(null);
   const [shouldLoad, setShouldLoad] = useState(false);
 
-  // A 2800px rootMargin gives plenty of lead time on a fast connection, but
-  // on real mobile networks the ~370KB gzipped chunk (react-globe.gl +
-  // topojson) can still lose the race if the visit scrolls straight there.
-  // Travel is 4 sections down, so there's typically many seconds of idle
-  // time before anyone reaches it regardless of scroll speed - prefetching
-  // the CHUNK on idle, decoupled from scroll position entirely, uses that
-  // time instead of gambling on a fixed pixel margin. This only warms the
-  // module cache; shouldLoad below still controls when it actually mounts
-  // and runs its setup.
-  //
-  // Prefetching the JS wasn't the whole story: TravelSection's own
-  // useEffect fetches a ~108KB world-atlas JSON (/globe/countries-110m.json)
-  // and react-globe.gl separately loads a ~70KB texture
-  // (/globe/earth-night.webp) - both only start once the component actually
-  // mounts, a second serial network round-trip stacked after the first
-  // (chunk download -> parse -> mount -> THEN fetch data -> THEN render the
-  // globe). Firing all three in parallel during the same idle window means
-  // by the time shouldLoad flips true, everything is already sitting in the
-  // browser's HTTP/image cache and TravelSection's own fetch/Image resolve
-  // instantly instead of hitting the network again.
   useEffect(() => {
     const idle = (window as unknown as { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
-    const prefetch = () => {
-      import('./components/sections/TravelSection');
-      fetch('/globe/countries-110m.json').catch(() => {});
-      new Image().src = '/globe/earth-night.webp';
-    };
-    const id = idle ? idle(prefetch) : window.setTimeout(prefetch, 2000);
-    return () => { if (!idle) window.clearTimeout(id); };
-  }, []);
+    const id2 = idle ? idle(onPrefetch) : window.setTimeout(onPrefetch, 2000);
+    return () => { if (!idle) window.clearTimeout(id2); };
+  }, [onPrefetch]);
 
   useEffect(() => {
     const el = placeholderRef.current;
@@ -61,22 +49,19 @@ const DeferredTravelSection: React.FC = () => {
         setShouldLoad(true);
         io.disconnect();
       }
-    }, { rootMargin: '2800px 0px' });
+    }, { rootMargin });
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [rootMargin]);
 
   if (shouldLoad) {
     return (
       <Suspense fallback={
-        <Box
-          id="travel"
-          sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}
-        >
+        <Box id={id} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight }}>
           <CircularProgress color="primary" />
         </Box>
       }>
-        <TravelSection />
+        <Component />
       </Suspense>
     );
   }
@@ -84,15 +69,24 @@ const DeferredTravelSection: React.FC = () => {
   return (
     <Box
       ref={placeholderRef}
-      id="travel"
-      sx={{
-        minHeight: '100vh',
-        scrollSnapAlign: { xs: 'none', md: 'start' },
-        scrollSnapStop: { xs: 'none', md: 'always' },
-      }}
+      id={id}
+      sx={{ minHeight, scrollSnapAlign: { xs: 'none', md: 'start' }, scrollSnapStop: { xs: 'none', md: 'always' } }}
     />
   );
 };
+
+// react-globe.gl's own data dependencies (world-atlas JSON + texture) don't
+// prefetch themselves just because the JS chunk did - see TravelSection.tsx.
+const prefetchTravel = () => {
+  import('./components/sections/TravelSection');
+  fetch('/globe/countries-110m.json').catch(() => {});
+  new Image().src = '/globe/earth-night.webp';
+};
+// Stable module-level references so DeferredSection's onPrefetch effect
+// dependency doesn't change identity every render.
+const prefetchExperience = () => { import('./components/sections/ExperienceSection'); };
+const prefetchProjects = () => { import('./components/sections/ProjectsSection'); };
+const prefetchContact = () => { import('./components/sections/ContactSection'); };
 
 const theme = createTheme({
   ...modernTechTheme,
@@ -133,10 +127,34 @@ function App() {
         <Layout>
           <HeroSection />
           <AboutSection />
-          <ExperienceSection />
-          <ProjectsSection />
-          <DeferredTravelSection />
-          <ContactSection />
+          <DeferredSection
+            id="experience"
+            Component={ExperienceSection}
+            onPrefetch={prefetchExperience}
+            rootMargin="1200px 0px"
+            minHeight={{ xs: 'auto', md: '100vh' }}
+          />
+          <DeferredSection
+            id="projects"
+            Component={ProjectsSection}
+            onPrefetch={prefetchProjects}
+            rootMargin="1200px 0px"
+            minHeight={{ xs: 'auto', md: '100vh' }}
+          />
+          <DeferredSection
+            id="travel"
+            Component={TravelSection}
+            onPrefetch={prefetchTravel}
+            rootMargin="2800px 0px"
+            minHeight="100vh"
+          />
+          <DeferredSection
+            id="contact"
+            Component={ContactSection}
+            onPrefetch={prefetchContact}
+            rootMargin="1200px 0px"
+            minHeight={{ xs: 'auto', md: '90vh' }}
+          />
           <SocialLinks />
         </Layout>
       </Box>
