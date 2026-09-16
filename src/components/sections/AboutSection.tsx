@@ -99,8 +99,20 @@ const AboutSection: React.FC = () => {
                             setFlippedIndex(prev => prev === index ? null : index);
                           }
                         }}
-                        onFocus={() => setFlippedIndex(index)}
-                        onBlur={() => setFlippedIndex(prev => (prev === index ? null : prev))}
+                        onFocus={() => {
+                          // Guarded the same as hover below: a touch tap moves focus to the
+                          // card too, so unconditionally flipping here raced with onClick's
+                          // toggle for that same tap (focus opens it, click immediately
+                          // closes it again since flippedIndex was already this index) -
+                          // the first tap looked like nothing happened and needed a second
+                          // one. Keyboard-only now; touch is onClick's job exclusively.
+                          if (!window.matchMedia('(hover: none)').matches) setFlippedIndex(index);
+                        }}
+                        onBlur={() => {
+                          if (!window.matchMedia('(hover: none)').matches) {
+                            setFlippedIndex(prev => (prev === index ? null : prev));
+                          }
+                        }}
                         onMouseEnter={() => {
                           if (!window.matchMedia('(hover: none)').matches) setFlippedIndex(index);
                         }}
