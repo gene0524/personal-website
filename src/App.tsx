@@ -111,6 +111,11 @@ function App() {
           overscrollBehavior: 'contain',
           '&::-webkit-scrollbar': {
             width: 8,
+            // If narrowing the window ever forces horizontal overflow here,
+            // the horizontal scrollbar's thickness comes from `height`, not
+            // `width` - without this it fell back to the browser's default
+            // (visibly thicker) size instead of matching the vertical one.
+            height: 8,
           },
           '&::-webkit-scrollbar-track': {
             backgroundColor: 'background.paper',
@@ -120,6 +125,19 @@ function App() {
             borderRadius: 4,
             '&:hover': {
               backgroundColor: 'primary.dark',
+            },
+          },
+          // The horizontal scrollbar only ever shows up as a side effect of
+          // some element overflowing when the window is narrowed - it isn't
+          // a deliberate nav element like the vertical one, so it's styled
+          // to blend into the page instead of drawing attention in green.
+          '&::-webkit-scrollbar-track:horizontal': {
+            backgroundColor: 'background.default',
+          },
+          '&::-webkit-scrollbar-thumb:horizontal': {
+            backgroundColor: '#030609',
+            '&:hover': {
+              backgroundColor: 'background.default',
             },
           },
         }}
