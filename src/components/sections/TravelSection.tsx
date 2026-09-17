@@ -369,12 +369,19 @@ const TravelSection: React.FC = () => {
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
                 touchAction: 'none',
+                maxWidth: '100%',
               },
             }}
           >
-            {/* Wrapper sized to match the canvas so the button stays inside the globe */}
+            {/* Wrapper sized to match the canvas so the button stays inside the globe.
+                globeSize starts at a hardcoded 420 and is only corrected by the
+                ResizeObserver below, which lags a frame behind during an active
+                window-resize drag - flexShrink:0 alone let that lag overflow the
+                page horizontally. maxWidth:100% caps it at the CSS layer instead,
+                synchronously, so it can never exceed its container regardless of
+                how far behind the observer's correction is. */}
             {countries.length > 0 && (
-              <Box sx={{ position: 'relative', width: globeSize, height: globeSize, flexShrink: 0 }}>
+              <Box sx={{ position: 'relative', width: globeSize, height: globeSize, maxWidth: '100%', flexShrink: 0 }}>
                 {isZoomed && (
                   <Box
                     onClick={resetZoom}
