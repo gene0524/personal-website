@@ -7,7 +7,7 @@ export const personalInfo = {
 
   // Hero: one line of what I do, one line of proof.
   tagline: 'I build the tooling, backend services and AI-powered workflows that keep a live trading platform running.',
-  proof: "Software Engineer at Syphonix, London · Imperial MSc Computing '24 (Distinction) · two peer-reviewed papers",
+  proof: "Software Engineer at Syphonix, London · Imperial MSc Computing '24 (Distinction)",
 
   about: {
     introduction:
